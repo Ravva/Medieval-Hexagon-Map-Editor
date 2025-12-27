@@ -69,7 +69,19 @@ interface AssetCategory {
 }
 
 interface ClipboardData {
-  hex: {
+  hexes: Array<{
+    q: number
+    r: number
+    terrain: TerrainType
+    height: number
+    rotation?: number
+    modelData?: { obj: string; mtl: string; name: string }
+    hasRiver?: boolean
+  }>
+  sourceHeight: number
+  globalLevel: number
+  // Для обратной совместимости с одиночным выделением
+  hex?: {
     q: number
     r: number
     terrain: TerrainType
@@ -78,8 +90,11 @@ interface ClipboardData {
     modelData?: { obj: string; mtl: string; name: string }
     hasRiver?: boolean
   }
-  sourceHeight: number
-  globalLevel: number
+}
+
+interface HistoryState {
+  map: string // JSON сериализация карты
+  timestamp: number
 }
 
 // Глобальный рендерер и сцена для превью (чтобы не превышать лимит WebGL контекстов)
@@ -405,13 +420,18 @@ export default function MapEditor() {
   const draggedModelRef = useRef<{ obj: string; mtl: string; name: string } | null>(null)
   const tileHeightRef = useRef<number>(1.0) // Will be updated from first loaded model
   const clipboardDataRef = useRef<ClipboardData | null>(null)
+  const historyRef = useRef<HistoryState[]>([])
+  const historyIndexRef = useRef<number>(-1)
+  const maxHistorySize = 50
 
   const [isLoading, setIsLoading] = useState(true)
   const [loadingText, setLoadingText] = useState('Initializing...')
   const [mapSize, setMapSize] = useState<MapSize>('small')
   const [selectedTerrain, setSelectedTerrain] = useState<TerrainType>(TERRAIN_TYPES.PLAINS)
   const [editMode, setEditMode] = useState<EditMode>('terrain')
-  const [selectedHex, setSelectedHex] = useState<{ q: number; r: number } | null>(null)
+  const [selectedHexes, setSelectedHexes] = useState<Array<{ q: number; r: number }>>([])
+  // Для обратной совместимости
+  const selectedHex = selectedHexes.length > 0 ? selectedHexes[0] : null
   const [currentHeightLevel, setCurrentHeightLevel] = useState(0) // Global height level 0-4
   const [selectedModel, setSelectedModel] = useState<{ obj: string; mtl: string; name: string } | null>(null)
 
@@ -648,7 +668,9 @@ export default function MapEditor() {
 
     mapRef.current = map
     await buildMap()
-    setSelectedHex(null)
+    setSelectedHexes([])
+    // Инициализируем историю после создания карты
+    saveHistoryState()
   }
 
   const showNotification = (type: 'success' | 'error', message: string) => {
@@ -777,8 +799,10 @@ export default function MapEditor() {
           }
         }
 
-        setSelectedHex(null)
+        setSelectedHexes([])
         setIsLoading(false)
+        // Инициализируем историю после загрузки карты
+        saveHistoryState()
         const mapName = metadata?.name || file.name
         showNotification('success', `Карта "${mapName}" успешно загружена`)
         console.log('Map loaded successfully')
@@ -876,8 +900,8 @@ export default function MapEditor() {
           hexMeshesRef.current.set(hexKey, clone as any)
 
           // Force selection highlight update if this is the selected hex
-          if (selectedHex && selectedHex.q === q && selectedHex.r === r) {
-            setSelectedHex({ ...selectedHex })
+          if (selectedHexes.some(h => h.q === q && h.r === r)) {
+            setSelectedHexes([...selectedHexes])
           }
         } else {
           // Load asynchronously if not cached
@@ -891,28 +915,104 @@ export default function MapEditor() {
     }
   }
 
-  const copyHex = (): boolean => {
-    if (!selectedHex || !mapRef.current) return false
+  const saveHistoryState = () => {
+    if (!mapRef.current) return
+    try {
+      const mapJson = MapSerializer.serialize(mapRef.current, mapSize, {})
+      const state: HistoryState = {
+        map: mapJson,
+        timestamp: Date.now(),
+      }
+      
+      // Удаляем все состояния после текущего индекса (если делаем undo, а потом новое действие)
+      historyRef.current = historyRef.current.slice(0, historyIndexRef.current + 1)
+      
+      // Добавляем новое состояние
+      historyRef.current.push(state)
+      
+      // Ограничиваем размер истории
+      if (historyRef.current.length > maxHistorySize) {
+        historyRef.current.shift()
+      } else {
+        historyIndexRef.current = historyRef.current.length - 1
+      }
+    } catch (error) {
+      console.warn('Failed to save history state:', error)
+    }
+  }
 
-    // Всегда копируем верхний тайл в ячейке
-    const hex = mapRef.current.getHex(selectedHex.q, selectedHex.r)
-    if (!hex) {
-      showNotification('error', 'Нет тайла для копирования')
+  const undo = async (): Promise<boolean> => {
+    if (historyIndexRef.current <= 0 || !mapRef.current || !sceneRef.current) return false
+    
+    historyIndexRef.current--
+    const state = historyRef.current[historyIndexRef.current]
+    
+    try {
+      const { map } = MapSerializer.deserialize(state.map)
+      mapRef.current = map
+      await buildMap()
+      setSelectedHexes([])
+      showNotification('success', 'Отменено')
+      return true
+    } catch (error) {
+      console.error('Failed to undo:', error)
+      showNotification('error', 'Ошибка отмены')
+      return false
+    }
+  }
+
+  const redo = async (): Promise<boolean> => {
+    if (historyIndexRef.current >= historyRef.current.length - 1 || !mapRef.current || !sceneRef.current) return false
+    
+    historyIndexRef.current++
+    const state = historyRef.current[historyIndexRef.current]
+    
+    try {
+      const { map } = MapSerializer.deserialize(state.map)
+      mapRef.current = map
+      await buildMap()
+      setSelectedHexes([])
+      showNotification('success', 'Повторено')
+      return true
+    } catch (error) {
+      console.error('Failed to redo:', error)
+      showNotification('error', 'Ошибка повтора')
+      return false
+    }
+  }
+
+  const copyHex = (): boolean => {
+    if (selectedHexes.length === 0 || !mapRef.current) return false
+
+    // Копируем все выделенные тайлы
+    const hexes: ClipboardData['hexes'] = []
+    
+    for (const selected of selectedHexes) {
+      const hex = mapRef.current.getHex(selected.q, selected.r)
+      if (hex) {
+        hexes.push({
+          q: hex.q,
+          r: hex.r,
+          terrain: hex.terrain,
+          height: hex.height,
+          rotation: hex.rotation,
+          modelData: hex.modelData,
+          hasRiver: hex.hasRiver,
+        })
+      }
+    }
+
+    if (hexes.length === 0) {
+      showNotification('error', 'Нет тайлов для копирования')
       return false
     }
 
     const clipboardData: ClipboardData = {
-      hex: {
-        q: hex.q,
-        r: hex.r,
-        terrain: hex.terrain,
-        height: hex.height,
-        rotation: hex.rotation,
-        modelData: hex.modelData,
-        hasRiver: hex.hasRiver,
-      },
-      sourceHeight: hex.height,
+      hexes,
+      sourceHeight: hexes[0].height, // Используем высоту первого тайла
       globalLevel: currentHeightLevel,
+      // Для обратной совместимости
+      hex: hexes.length === 1 ? hexes[0] : undefined,
     }
 
     // Сохраняем в localStorage для персистентности
@@ -925,12 +1025,15 @@ export default function MapEditor() {
     // Сохраняем в ref
     clipboardDataRef.current = clipboardData
 
-    showNotification('success', 'Тайл скопирован')
+    showNotification('success', `Скопировано тайлов: ${hexes.length}`)
     return true
   }
 
   const pasteHex = async (q: number, r: number): Promise<boolean> => {
     if (!mapRef.current) return false
+
+    // Сохраняем состояние перед вставкой для undo
+    saveHistoryState()
 
     // Получаем данные из буфера обмена
     let clipboardData: ClipboardData | null = clipboardDataRef.current
@@ -953,63 +1056,83 @@ export default function MapEditor() {
       return false
     }
 
-    // Проверяем, что координаты валидны
-    if (!mapRef.current.isValidCoordinate(q, r)) {
-      showNotification('error', 'Неверная позиция для вставки')
+    // Поддержка как нового формата (hexes), так и старого (hex) для обратной совместимости
+    const hexesToPaste = clipboardData.hexes || (clipboardData.hex ? [clipboardData.hex] : [])
+    
+    if (hexesToPaste.length === 0) {
+      showNotification('error', 'Буфер обмена пуст')
       return false
     }
 
-    // Создаем новый Hex
-    const newHex = new Hex(
-      q,
-      r,
-      clipboardData.hex.terrain
-    )
+    // Вычисляем смещение от первого скопированного тайла
+    const firstHex = hexesToPaste[0]
+    const offsetQ = q - firstHex.q
+    const offsetR = r - firstHex.r
 
-    // Вычисляем целевую высоту с учетом глобального уровня
-    // Сохраняем относительную высоту (разница между высотой тайла и глобальным уровнем при копировании)
-    const heightOffset = clipboardData.hex.height - clipboardData.globalLevel
-    let targetHeight = currentHeightLevel + heightOffset
+    let pastedCount = 0
+    const pastedHexes: Array<{ q: number; r: number }> = []
 
-    // Проверяем, что целевая высота в допустимых пределах
-    if (targetHeight < 0) {
-      targetHeight = 0
+    // Вставляем все тайлы с сохранением относительных позиций
+    for (const hexData of hexesToPaste) {
+      const targetQ = hexData.q + offsetQ
+      const targetR = hexData.r + offsetR
+
+      // Проверяем, что координаты валидны
+      if (!mapRef.current.isValidCoordinate(targetQ, targetR)) {
+        continue
+      }
+
+      // Вычисляем целевую высоту с учетом глобального уровня
+      const heightOffset = hexData.height - clipboardData.globalLevel
+      let targetHeight = currentHeightLevel + heightOffset
+
+      // Проверяем, что целевая высота в допустимых пределах
+      if (targetHeight < 0) {
+        targetHeight = 0
+      }
+      if (targetHeight > 4) {
+        continue
+      }
+
+      // Проверяем, свободен ли целевой уровень
+      if (mapRef.current.hasHex(targetQ, targetR, targetHeight)) {
+        // Ищем следующий свободный уровень выше текущего глобального
+        let nextLevel = currentHeightLevel
+        while (nextLevel <= 4 && mapRef.current.hasHex(targetQ, targetR, nextLevel)) {
+          nextLevel++
+        }
+        if (nextLevel > 4) {
+          continue
+        }
+        targetHeight = nextLevel
+      }
+
+      // Создаем новый Hex
+      const newHex = new Hex(targetQ, targetR, hexData.terrain)
+      newHex.height = targetHeight
+      newHex.rotation = hexData.rotation || 0
+      newHex.modelData = hexData.modelData
+      newHex.hasRiver = hexData.hasRiver || false
+
+      // Устанавливаем тайл на карту
+      mapRef.current.setHex(targetQ, targetR, newHex)
+
+      // Обновляем визуализацию
+      await updateHexMesh(targetQ, targetR, targetHeight)
+
+      pastedCount++
+      pastedHexes.push({ q: targetQ, r: targetR })
     }
-    if (targetHeight > 4) {
-      showNotification('error', 'Максимальная высота достигнута')
+
+    if (pastedCount === 0) {
+      showNotification('error', 'Не удалось вставить тайлы')
       return false
     }
 
-    // Проверяем, свободен ли целевой уровень
-    if (mapRef.current.hasHex(q, r, targetHeight)) {
-      // Ищем следующий свободный уровень выше текущего глобального
-      let nextLevel = currentHeightLevel
-      while (nextLevel <= 4 && mapRef.current.hasHex(q, r, nextLevel)) {
-        nextLevel++
-      }
-      if (nextLevel > 4) {
-        showNotification('error', 'Нет свободных уровней')
-        return false
-      }
-      targetHeight = nextLevel
-    }
+    // Обновляем выделение на вставленные тайлы
+    setSelectedHexes(pastedHexes)
 
-    // Применяем свойства из скопированного тайла
-    newHex.height = targetHeight
-    newHex.rotation = clipboardData.hex.rotation || 0
-    newHex.modelData = clipboardData.hex.modelData
-    newHex.hasRiver = clipboardData.hex.hasRiver || false
-
-    // Устанавливаем тайл на карту
-    mapRef.current.setHex(q, r, newHex)
-
-    // Обновляем визуализацию
-    await updateHexMesh(q, r, targetHeight)
-
-    // Обновляем выделение
-    setSelectedHex({ q, r })
-
-    showNotification('success', 'Тайл вставлен')
+    showNotification('success', `Вставлено тайлов: ${pastedCount}`)
     return true
   }
 
@@ -1079,7 +1202,7 @@ export default function MapEditor() {
     // Use requestAnimationFrame to ensure mesh is rendered before updating highlight
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        setSelectedHex({ q: toQ, r: toR })
+        setSelectedHexes([{ q: toQ, r: toR }])
       })
     })
 
@@ -1239,7 +1362,9 @@ export default function MapEditor() {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
 
       // WASD: Move selected hex if selected, otherwise pan camera
-      if (selectedHex && mapRef.current) {
+      // Работаем только с первым выделенным hex для навигации
+      if (selectedHexes.length > 0 && mapRef.current) {
+        const selectedHex = selectedHexes[0]
         const neighbors = mapRef.current.getNeighborCoordinates(selectedHex.q, selectedHex.r)
         const hexStack = mapRef.current.getHexStack(selectedHex.q, selectedHex.r)
         if (hexStack.length > 0) {
@@ -1281,8 +1406,9 @@ export default function MapEditor() {
         if (e.code === 'KeyD') cameraTargetRef.current.add(right.multiplyScalar(-moveSpeed))
       }
 
-      // Q/E Rotating, R/F Height change for selected hex
-      if (selectedHex && mapRef.current) {
+      // Q/E Rotating, R/F Height change for selected hex (работаем только с первым выделенным)
+      if (selectedHexes.length > 0 && mapRef.current) {
+        const selectedHex = selectedHexes[0]
         // Always work with topmost hex
         const hexStack = mapRef.current.getHexStack(selectedHex.q, selectedHex.r)
         const hex = hexStack.length > 0 ? hexStack[hexStack.length - 1] : null
@@ -1318,7 +1444,7 @@ export default function MapEditor() {
               // Force selection highlight update after mesh is created
               requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
-                  setSelectedHex({ ...selectedHex })
+                  setSelectedHexes([selectedHex])
                 })
               })
             }
@@ -1343,7 +1469,7 @@ export default function MapEditor() {
               // Force selection highlight update after mesh is created
               requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
-                  setSelectedHex({ ...selectedHex })
+                  setSelectedHexes([selectedHex])
                 })
               })
             }
@@ -1351,10 +1477,13 @@ export default function MapEditor() {
         }
       }
 
-      // Delete key deletes selected hex (topmost)
-      if (e.code === 'Delete' && selectedHex) {
-        await removeHex(selectedHex.q, selectedHex.r)
-        setSelectedHex(null)
+      // Delete key deletes all selected hexes (topmost)
+      if (e.code === 'Delete' && selectedHexes.length > 0) {
+        saveHistoryState()
+        for (const hex of selectedHexes) {
+          await removeHex(hex.q, hex.r)
+        }
+        setSelectedHexes([])
       }
 
       // Copy/Paste with Ctrl+C / Ctrl+V (or Cmd on Mac)
@@ -1376,6 +1505,26 @@ export default function MapEditor() {
           }
           return
         }
+
+        // Undo/Redo with Ctrl+Z / Ctrl+Y or Ctrl+Shift+Z
+        if (e.key === 'z' || e.key === 'Z') {
+          e.preventDefault()
+          if (e.shiftKey) {
+            // Ctrl+Shift+Z = Redo
+            await redo()
+          } else {
+            // Ctrl+Z = Undo
+            await undo()
+          }
+          return
+        }
+
+        if (e.key === 'y' || e.key === 'Y') {
+          e.preventDefault()
+          // Ctrl+Y = Redo
+          await redo()
+          return
+        }
       }
     }
 
@@ -1383,13 +1532,15 @@ export default function MapEditor() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [selectedHex])
+  }, [selectedHexes])
 
   // Selection Highlight Update Effect
   useEffect(() => {
     if (!selectionMeshRef.current || !mapRef.current) return
 
-    if (selectedHex) {
+    // Показываем выделение для первого выделенного hex (можно расширить для множественных)
+    if (selectedHexes.length > 0) {
+      const selectedHex = selectedHexes[0]
       // Always get the topmost hex at this position
       const hex = mapRef.current.getHex(selectedHex.q, selectedHex.r)
       if (!hex) {
@@ -1445,7 +1596,7 @@ export default function MapEditor() {
     } else {
       selectionMeshRef.current.visible = false
     }
-  }, [selectedHex])
+  }, [selectedHexes])
 
   useEffect(() => {
     const handleResize = () => {
@@ -1536,12 +1687,34 @@ export default function MapEditor() {
     const coords = getHexAtMousePosition(event)
     if (coords) {
       if (mapRef.current.hasHex(coords.q, coords.r)) {
-        setSelectedHex(coords)
+        // Ctrl+ЛКМ: множественное выделение
+        if (event.ctrlKey || event.metaKey) {
+          setSelectedHexes(prev => {
+            // Проверяем, не выбран ли уже этот hex
+            const isAlreadySelected = prev.some(h => h.q === coords.q && h.r === coords.r)
+            if (isAlreadySelected) {
+              // Убираем из выделения
+              return prev.filter(h => !(h.q === coords.q && h.r === coords.r))
+            } else {
+              // Добавляем в выделение
+              return [...prev, coords]
+            }
+          })
+        } else {
+          // Обычный клик: одиночное выделение
+          setSelectedHexes([coords])
+        }
       } else {
-        setSelectedHex(null)
+        // Клик по пустому месту без Ctrl - снимаем выделение
+        if (!event.ctrlKey && !event.metaKey) {
+          setSelectedHexes([])
+        }
       }
     } else {
-      setSelectedHex(null)
+      // Клик вне карты без Ctrl - снимаем выделение
+      if (!event.ctrlKey && !event.metaKey) {
+        setSelectedHexes([])
+      }
     }
   }
 
@@ -1786,22 +1959,32 @@ export default function MapEditor() {
         </div>
 
         {/* BOTTOM LEFT: SELECTION INFO */}
-        {selectedHex && mapRef.current?.getHex(selectedHex.q, selectedHex.r) && (
+        {selectedHexes.length > 0 && mapRef.current?.getHex(selectedHexes[0].q, selectedHexes[0].r) && (
           <div className="absolute bottom-6 left-6 z-30 p-1 bg-card/80 backdrop-blur-xl border border-border/50 rounded-full flex items-center gap-4 px-6 py-3 shadow-2xl pointer-events-auto animate-in fade-in slide-in-from-left-4 duration-300">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Hex</span>
-              <span className="text-sm font-black text-primary tracking-tighter tabular-nums">{selectedHex.q}, {selectedHex.r}</span>
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                {selectedHexes.length > 1 ? 'Selected' : 'Hex'}
+              </span>
+              {selectedHexes.length === 1 ? (
+                <span className="text-sm font-black text-primary tracking-tighter tabular-nums">{selectedHexes[0].q}, {selectedHexes[0].r}</span>
+              ) : (
+                <span className="text-sm font-black text-primary tracking-tighter tabular-nums">{selectedHexes.length} hexes</span>
+              )}
             </div>
-            <Separator orientation="vertical" className="h-5 bg-border/50" />
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Level</span>
-              <span className="text-sm font-black text-primary tracking-tighter tabular-nums">{(mapRef.current.getHex(selectedHex.q, selectedHex.r)?.height || 0) + 1}/5</span>
-            </div>
-            <Separator orientation="vertical" className="h-5 bg-border/50" />
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Type</span>
-              <span className="text-xs font-bold text-primary tracking-tight uppercase">{mapRef.current.getHex(selectedHex.q, selectedHex.r)?.modelData?.name || mapRef.current.getHex(selectedHex.q, selectedHex.r)?.terrain || 'Standard'}</span>
-            </div>
+            {selectedHexes.length === 1 && (
+              <>
+                <Separator orientation="vertical" className="h-5 bg-border/50" />
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Level</span>
+                  <span className="text-sm font-black text-primary tracking-tighter tabular-nums">{(mapRef.current.getHex(selectedHexes[0].q, selectedHexes[0].r)?.height || 0) + 1}/5</span>
+                </div>
+                <Separator orientation="vertical" className="h-5 bg-border/50" />
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Type</span>
+                  <span className="text-xs font-bold text-primary tracking-tight uppercase">{mapRef.current.getHex(selectedHexes[0].q, selectedHexes[0].r)?.modelData?.name || mapRef.current.getHex(selectedHexes[0].q, selectedHexes[0].r)?.terrain || 'Standard'}</span>
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -1971,8 +2154,9 @@ export default function MapEditor() {
             onMouseDown={(e) => {
               if (e.button === 0) {
                 // Left click: start tile drag if clicking on selected hex
-                if (selectedHex) {
+                if (selectedHexes.length > 0) {
                   const coords = getHexAtMousePosition(e)
+                  const selectedHex = selectedHexes[0] // Drag only first selected
                   if (coords && coords.q === selectedHex.q && coords.r === selectedHex.r) {
                     isDraggingTileRef.current = true
                     dragStartHexRef.current = { q: selectedHex.q, r: selectedHex.r }
