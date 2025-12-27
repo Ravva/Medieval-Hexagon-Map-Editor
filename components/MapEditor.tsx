@@ -840,7 +840,7 @@ export default function MapEditor() {
         const cached = modelLoader.getCachedModel(key)
 
         if (cached) {
-          const [wX, wZ] = hexToWorld(x, y)
+          const [wX, wZ] = hexToWorld(q, r)
           const clone = cached.clone()
           clone.rotation.y = Math.PI / 2 + (hex.rotation || 0)
           clone.scale.set(3.5, 3.5, 3.5)
@@ -1110,18 +1110,19 @@ export default function MapEditor() {
 
           // Map WASD to neighbor directions (simplified with axial coordinates - no conditional logic!)
           // Directions in axial coordinates are always the same
+          // Инвертировано: W/S и A/D поменяны местами
           if (e.code === 'KeyW') {
-            // North West (q: 0, r: -1)
-            targetCoords = neighbors.find(n => n.q === selectedHex.q && n.r === selectedHex.r - 1) || neighbors.find(n => n.r < selectedHex.r) || null
-          } else if (e.code === 'KeyS') {
-            // South East (q: 0, r: 1)
+            // South East (q: 0, r: 1) - инвертировано
             targetCoords = neighbors.find(n => n.q === selectedHex.q && n.r === selectedHex.r + 1) || neighbors.find(n => n.r > selectedHex.r) || null
+          } else if (e.code === 'KeyS') {
+            // North West (q: 0, r: -1) - инвертировано
+            targetCoords = neighbors.find(n => n.q === selectedHex.q && n.r === selectedHex.r - 1) || neighbors.find(n => n.r < selectedHex.r) || null
           } else if (e.code === 'KeyA') {
-            // West (q: -1, r: 0)
-            targetCoords = neighbors.find(n => n.q === selectedHex.q - 1 && n.r === selectedHex.r) || neighbors.find(n => n.q < selectedHex.q) || null
-          } else if (e.code === 'KeyD') {
-            // East (q: 1, r: 0)
+            // East (q: 1, r: 0) - инвертировано
             targetCoords = neighbors.find(n => n.q === selectedHex.q + 1 && n.r === selectedHex.r) || neighbors.find(n => n.q > selectedHex.q) || null
+          } else if (e.code === 'KeyD') {
+            // West (q: -1, r: 0) - инвертировано
+            targetCoords = neighbors.find(n => n.q === selectedHex.q - 1 && n.r === selectedHex.r) || neighbors.find(n => n.q < selectedHex.q) || null
           }
 
           if (targetCoords && !mapRef.current.hasHex(targetCoords.q, targetCoords.r, hexHeight)) {
@@ -1137,8 +1138,9 @@ export default function MapEditor() {
 
         if (e.code === 'KeyW') cameraTargetRef.current.add(forward.multiplyScalar(moveSpeed))
         if (e.code === 'KeyS') cameraTargetRef.current.add(forward.multiplyScalar(-moveSpeed))
-        if (e.code === 'KeyA') cameraTargetRef.current.add(right.multiplyScalar(-moveSpeed))
-        if (e.code === 'KeyD') cameraTargetRef.current.add(right.multiplyScalar(moveSpeed))
+        // Инвертировано: A влево, D вправо
+        if (e.code === 'KeyA') cameraTargetRef.current.add(right.multiplyScalar(moveSpeed))
+        if (e.code === 'KeyD') cameraTargetRef.current.add(right.multiplyScalar(-moveSpeed))
       }
 
       // Q/E Rotating, R/F Height change for selected hex
@@ -1659,6 +1661,11 @@ export default function MapEditor() {
                 </div>
 
                 <div className="flex items-center justify-between py-1.5 border-b border-border/30">
+                  <span className="text-muted-foreground">Pan camera</span>
+                  <span className="bg-primary/20 px-2 py-0.5 rounded border border-primary/30 text-primary font-mono font-bold">WASD</span>
+                </div>
+
+                <div className="flex items-center justify-between py-1.5 border-b border-border/30">
                   <span className="text-muted-foreground">Rotate tile</span>
                   <span className="bg-primary/20 px-2 py-0.5 rounded border border-primary/30 text-primary font-mono font-bold">Q / E</span>
                 </div>
@@ -1718,7 +1725,7 @@ export default function MapEditor() {
               const raycaster = new THREE.Raycaster()
               raycaster.setFromCamera(mouse, cameraRef.current)
               const intersects = raycaster.intersectObjects(Array.from(hexMeshesRef.current.values()), true)
-              let targetCoords: { x: number; y: number } | null = null
+              let targetCoords: { q: number; r: number } | null = null
 
               if (intersects.length > 0) {
                 let hitMesh: THREE.Object3D | null = intersects[0].object
