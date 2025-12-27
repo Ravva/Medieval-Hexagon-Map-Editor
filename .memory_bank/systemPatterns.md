@@ -6,253 +6,226 @@
 
 ```mermaid
 graph TB
-    UI[User Interface Layer] --> GM[Game Manager]
-    GM --> GS[Game State]
-    GM --> RE[Render Engine]
-    GM --> IE[Input Engine]
-    GM --> AI[AI Engine]
+    UI[User Interface Layer<br/>Shadcn/ui Components] --> Editor[Map Editor React Component]
+    Editor --> EditorState[Editor State<br/>React Hooks]
+    Editor --> ThreeEditor[Three.js Editor Scene]
+    Editor --> MapSystem[Map System<br/>TypeScript Classes]
     
-    GS --> Map[Map System]
-    GS --> Units[Unit System]
-    GS --> Cities[City System]
-    GS --> Combat[Combat System]
+    MapSystem --> Hex[Hex Class]
+    MapSystem --> MapSerializer[Map Serializer]
     
-    RE --> Canvas[HTML5 Canvas]
-    RE --> Three[Three.js 3D Renderer]
-    IE --> Events[DOM Events]
+    ThreeEditor --> ModelLoader[Model Loader]
+    ModelLoader --> Assets[3D Assets]
     
     subgraph "Persistence Layer"
-        LS[Local Storage]
-        SS[Session Storage]
+        LS[Local Storage<br/>Map Files]
     end
     
-    GS --> LS
-    GS --> SS
-    
-    subgraph "Editor (Next.js)"
-        Editor[Map Editor React Component]
-        Editor --> EditorState[Editor State]
-        Editor --> ThreeEditor[Three.js Editor Scene]
-    end
+    EditorState --> LS
+    MapSerializer --> LS
 ```
 
-### Двухпроектная Архитектура
+### Архитектура Редактора
 
-Проект состоит из двух частей:
-1. **Основной проект** (Vanilla JS) - игровая логика и основной интерфейс
-2. **Редактор карт** (Next.js 16 + React 19) - современный редактор карт
-
-Оба проекта используют общие классы игровой логики (`Map`, `Hex`) через TypeScript версии в `editor-nextjs/lib/game/`.
+Проект построен на современном стеке:
+- **Next.js 16**: React фреймворк с App Router
+- **React 19**: UI библиотека с хуками
+- **Three.js**: 3D рендеринг
+- **TypeScript**: Типизация всех компонентов
 
 ## Ключевые Технические Решения
 
-### Паттерн 1: Model-View-Controller (MVC)
+### Паттерн 1: Component-Based Architecture
 
-**Описание**: Разделение игровой логики, представления и управления
+**Описание**: Разделение UI на переиспользуемые React компоненты
 
 **Как использовать**:
-- **Model**: `GameState`, `Map`, `Hex`, `City`, `Unit` - чистые классы данных без UI зависимостей
-- **View**: `RenderEngine`, `RenderEngine3D`, `CityRenderer` - отвечают только за отрисовку
-- **Controller**: `GameManager`, `InputEngine` - обрабатывают пользовательский ввод и координируют модели и представления
+- **Компоненты**: `MapEditor`, `ModelPreview`, UI компоненты из `components/ui/`
+- **Хуки**: Использование React хуков для состояния (`useState`, `useRef`, `useEffect`)
+- **Refs**: Использование `useRef` для доступа к Three.js объектам
 
 **Пример**:
-```javascript
-// Model (GameState.js)
-class GameState {
-    constructor() {
-        this.map = new Map();
-        this.observers = [];
-    }
-    notify(event) { /* ... */ }
-}
-
-// View (RenderEngine.js)
-class RenderEngine {
-    render(gameState) { /* отрисовка на основе состояния */ }
-}
-
-// Controller (GameManager.js)
-class GameManager {
-    constructor() {
-        this.gameState = new GameState();
-        this.renderEngine = new RenderEngine();
-    }
-    processAction(action) {
-        // Изменяем модель
-        this.gameState.update(action);
-        // Обновляем представление
-        this.renderEngine.render(this.gameState);
-    }
+```typescript
+const MapEditor = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const sceneRef = useRef<THREE.Scene | null>(null)
+  const mapRef = useRef<GameMap | null>(null)
+  
+  useEffect(() => {
+    // Инициализация Three.js сцены
+  }, [])
+  
+  return <canvas ref={canvasRef} />
 }
 ```
 
-### Паттерн 2: Observer Pattern
+### Паттерн 2: Ref Pattern для Three.js
 
-**Описание**: Для уведомлений об изменениях состояния игры
+**Описание**: Использование `useRef` для хранения Three.js объектов вне React дерева
 
-**Как использовать**: Все компоненты подписываются на `GameState` и получают уведомления о изменениях
+**Как использовать**: Three.js объекты (сцены, камеры, меши) хранятся в refs, чтобы избежать ререндеров React
 
 **Пример**:
-```javascript
-gameState.subscribe((event) => {
-    if (event.type === 'UNIT_MOVED') {
-        renderEngine.updateUnitPosition(event.data);
-    }
-});
+```typescript
+const sceneRef = useRef<THREE.Scene | null>(null)
+const hexMeshesRef = useRef<Map<string, THREE.Mesh>>(new Map())
+
+// Создание меша
+const mesh = new THREE.Mesh(geometry, material)
+hexMeshesRef.current.set(key, mesh)
+sceneRef.current?.add(mesh)
 ```
 
-### Паттерн 3: Factory Pattern
+### Паттерн 3: Command Pattern для Undo/Redo
 
-**Описание**: Для создания юнитов, героев и игровых объектов
+**Описание**: История состояний для отмены и повтора операций
 
-**Как использовать**: Используется в `Unit`, `Hero`, `City` классах для создания стандартизированных объектов
+**Реализация**: `historyRef` содержит массив состояний карты, `historyIndexRef` указывает на текущее состояние
 
-### Паттерн 4: Command Pattern
+**Пример**:
+```typescript
+const historyRef = useRef<HistoryState[]>([])
+const historyIndexRef = useRef<number>(-1)
 
-**Описание**: Для обработки пользовательских действий с возможностью undo/redo
+const saveHistoryState = () => {
+  const mapJson = MapSerializer.serialize(mapRef.current, mapSize, {})
+  historyRef.current.push({ map: mapJson, timestamp: Date.now() })
+  historyIndexRef.current = historyRef.current.length - 1
+}
 
-**Реализация**: Каждое действие игрока инкапсулируется в команду
+const undo = async () => {
+  if (historyIndexRef.current > 0) {
+    historyIndexRef.current--
+    const state = historyRef.current[historyIndexRef.current]
+    const { map } = MapSerializer.deserialize(state.map)
+    mapRef.current = map
+    await buildMap()
+  }
+}
+```
 
-### Паттерн 5: State Pattern
+### Паттерн 4: Factory Pattern для Hex
 
-**Описание**: Для управления различными состояниями игры (SETUP, PLAYING, ENDED)
+**Описание**: Создание Hex объектов через конструктор с валидацией
 
-**Реализация**: `GameManager.gamePhase` определяет доступные действия
+**Реализация**: `Hex` класс создается с координатами (q, r) и типом местности
+
+### Паттерн 5: Singleton Pattern для ModelLoader
+
+**Описание**: Единственный экземпляр ModelLoader для кеширования моделей
+
+**Реализация**: `modelLoader` экспортируется как singleton
 
 ## Стандарты Кода
 
 ### Именование
 
-- **Классы**: PascalCase (`GameManager`, `RenderEngine`)
-- **Методы/функции**: camelCase (`initializeGame`, `processAction`)
-- **Константы**: UPPER_SNAKE_CASE (`MAX_UNITS`, `TERRAIN_TYPES`)
-- **Приватные поля**: начинаются с `_` (`_loadModelInternal`, `_models`)
-- **Файлы**: PascalCase для классов (`GameState.js`), camelCase для утилит (`mapGenerator.js`)
+- **Компоненты**: PascalCase (`MapEditor`, `ModelPreview`)
+- **Функции/методы**: camelCase (`buildMap`, `updateHexMesh`)
+- **Константы**: UPPER_SNAKE_CASE (`TERRAIN_TYPES`, `LEVEL_HEIGHT`)
+- **Интерфейсы**: PascalCase с префиксом `I` или без (`HexData`, `ClipboardData`)
+- **Типы**: PascalCase (`TerrainType`, `EditMode`)
+- **Файлы**: PascalCase для компонентов (`MapEditor.tsx`), camelCase для утилит (`modelLoader.ts`)
 
 ### Структура файлов
 
 ```
-warlords-clone/
-├── index.html              # Точка входа для основной игры
-├── map-editor.html         # Точка входа для редактора карт (Vanilla JS)
-├── js/
-│   ├── main.js            # Инициализация игры
-│   ├── core/              # Ядро игровой логики (Vanilla JS)
-│   │   ├── GameManager.js
-│   │   ├── GameState.js
-│   │   ├── Map.js
-│   │   ├── Hex.js
-│   │   ├── Unit.js
-│   │   └── ...
-│   ├── editor/            # Редактор карт (Vanilla JS версия)
-│   │   └── MapEditor.js
-│   └── ui/                # UI компоненты (Vanilla JS)
-│       └── GameSetup.js
-├── editor-nextjs/         # Редактор карт (Next.js)
-│   ├── app/               # Next.js App Router
-│   ├── components/        # React компоненты
-│   └── lib/
-│       └── game/          # TypeScript версии игровых классов
-├── assets/                # 3D модели и текстуры
-└── styles/                # CSS файлы (Shadcn/ui темы)
+Medieval-Hexagon-Map-Editor/
+├── app/                    # Next.js App Router
+│   ├── layout.tsx         # Root layout
+│   ├── page.tsx           # Главная страница
+│   └── api/               # API routes
+│       └── assets/        # Proxy для assets
+├── components/            # React компоненты
+│   ├── MapEditor.tsx      # Основной компонент редактора
+│   └── ui/                # Shadcn/ui компоненты
+│       ├── button.tsx
+│       ├── card.tsx
+│       └── ...
+├── lib/                   # Утилиты и игровая логика
+│   ├── game/              # Игровые классы
+│   │   ├── Hex.ts
+│   │   ├── Map.ts
+│   │   ├── MapSerializer.ts
+│   │   └── HexCoordinateConverter.ts
+│   ├── three/             # Three.js утилиты
+│   │   └── ModelLoader.ts
+│   └── utils.ts           # Общие утилиты
+├── assets/                # 3D модели и текстуры (симлинк)
+├── public/                # Статические файлы
+├── .memory_bank/          # Livedocs документация
+├── docs/                  # Дополнительная документация
+└── styles/                # Глобальные стили
 ```
 
 ### Обработка ошибок
 
-**Принцип**: Fail gracefully с fallback значениями
+**Принцип**: Fail gracefully с fallback значениями и пользовательскими уведомлениями
 
 **Пример**:
-```javascript
-async loadModel(key, objPath, mtlPath) {
-    try {
-        return await this._loadModelInternal(key, objPath, mtlPath);
-    } catch (error) {
-        console.error(`Failed to load model ${key}:`, error);
-        // Возвращаем fallback геометрию вместо остановки игры
-        return this.createFallbackMesh();
-    }
+```typescript
+const loadModel = async (key: string) => {
+  try {
+    return await modelLoader.loadModel(key, objPath, mtlPath)
+  } catch (error) {
+    console.error(`Failed to load model ${key}:`, error)
+    showNotification('error', `Не удалось загрузить модель: ${key}`)
+    return null
+  }
 }
 ```
 
-**Логирование**:
-- Используем `console.error` для критических ошибок
-- Используем `console.warn` для предупреждений (например, медленная загрузка)
-- Используем `console.log` для информационных сообщений (загрузка моделей)
+**Уведомления**: Использование `showNotification` для информирования пользователя об ошибках и успешных операциях
 
 ### Асинхронные операции
 
-**Паттерн**: Используем `Promise.race` с таймаутами для предотвращения зависаний
+**Паттерн**: Использование `async/await` для всех асинхронных операций
 
 **Пример**:
-```javascript
-const timeoutPromise = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('Timeout')), 5000)
-);
-const model = await Promise.race([loadPromise, timeoutPromise]);
+```typescript
+const buildMap = async () => {
+  const promises: Promise<void>[] = []
+  mapRef.current.hexes.forEach((hexStack, key) => {
+    hexStack.forEach(hex => {
+      promises.push(createHexMesh(hex))
+    })
+  })
+  await Promise.all(promises)
+}
 ```
 
 ## Архитектурные Правила
 
 ### 1. Разделение ответственности
 
-- **Игровая логика** (`core/`) не должна зависеть от UI или рендеринга
-- **Рендереры** (`RenderEngine`, `RenderEngine3D`) не должны содержать игровую логику
-- **UI компоненты** (`ui/`) не должны напрямую модифицировать игровое состояние
+- **UI компоненты** (`components/`) не должны содержать игровую логику
+- **Игровая логика** (`lib/game/`) не должна зависеть от UI или Three.js
+- **Three.js утилиты** (`lib/three/`) не должны содержать игровую логику
+- **MapEditor** координирует взаимодействие между UI, логикой и рендерингом
 
 ### 2. Использование Three.js
 
-- Все 3D операции через `RenderEngine3D` или `MapEditor`
+- Все 3D операции через Three.js API
 - Модели кешируются в `ModelLoader` для повторного использования
-- Текстуры управляются через `TextureManager`
+- Меши хранятся в `hexMeshesRef` для быстрого доступа
+- Использование `requestAnimationFrame` для рендеринга
 
-### 3. Миграция на React
+### 3. Управление состоянием
 
-- Новый функционал для редактора карт разрабатывается в `editor-nextjs/`
-- Общая игровая логика портируется в TypeScript в `editor-nextjs/lib/game/`
-- Основной проект остается на Vanilla JS до завершения миграции
+- **Локальное состояние**: `useState` для UI состояния
+- **Refs**: `useRef` для Three.js объектов и больших структур данных
+- **Эффекты**: `useEffect` для синхронизации с Three.js и побочных эффектов
 
 ### 4. Стилизация
 
-- Используем Shadcn/ui компоненты и темы (`styles/shadcn-*.css`)
-- Темная тема по умолчанию (класс `dark` на `<html>`)
-- Адаптивность через CSS Grid/Flexbox
+- Используем Shadcn/ui компоненты (`components/ui/`)
+- Tailwind CSS для кастомной стилизации
+- Темная тема по умолчанию
+- Адаптивность через Tailwind utilities
 
-### 5. Гибридная Архитектура React/Vanilla JS
+### 5. Система Уровней Тайлов
 
-**Принцип**: Разделение UI слоя и игровой логики
-
-**Как работает**:
-- **React (Next.js)**: Только для редактора карт и UI компонентов
-- **Vanilla JS**: Вся игровая логика (GameManager, GameState, AI, Combat)
-- **Связь**: React компоненты вызывают методы vanilla JS классов через refs/hooks
-- **Canvas**: Остается вне React дерева, управление через refs
-
-**Пример интеграции**:
-```typescript
-// React компонент использует vanilla JS класс
-const editor = useRef<MapEditor | null>(null);
-
-useEffect(() => {
-  editor.current = new MapEditor(canvasRef.current);
-  // MapEditor - vanilla JS класс
-}, []);
-```
-
-### 6. Shadcn/ui Компоненты
-
-**В Vanilla JS**:
-- Использование через CSS классы или JavaScript API
-- Компоненты в `js/ui/shadcn.js`
-- Темы в `styles/shadcn-theme.css` и `styles/shadcn-components.css`
-
-**В Next.js**:
-- Нативные React компоненты из `components/ui/`
-- Полная поддержка TypeScript и Tailwind CSS
-- Тема настроена в `app/globals.css`
-
-### 7. Система Уровней Тайлов
-
-**Описание**: Редактор карт поддерживает многоуровневую систему размещения тайлов (до 5 уровней, 0-4).
+**Описание**: Редактор поддерживает многоуровневую систему размещения тайлов (до 5 уровней, 0-4).
 
 **Ключевые принципы**:
 - **LEVEL_HEIGHT**: Константа, равная высоте базового тайла после масштабирования. Устанавливается один раз при первой загрузке тайла и используется для всех последующих вычислений
@@ -262,82 +235,79 @@ useEffect(() => {
 - **Уровень N**: Нижняя часть тайла на верхней поверхности уровня N-1 (Y = N * LEVEL_HEIGHT - minY)
 
 **Структура данных**:
-- `Map.hexes`: Массив стеков тайлов `(Hex[] | null)[]` - каждый элемент массива может содержать несколько тайлов на разных уровнях
+- `Map.hexes`: Map с ключами `"q,r"` и значениями `Hex[]` (стек тайлов)
 - `Hex.height`: Число от 0 до 4, определяющее уровень тайла
-- `selectedHex`: `{ x: number; y: number }` - всегда указывает на координаты, выбор верхнего тайла происходит автоматически через `map.getHex(x, y)`
+- `selectedHexes`: `Array<{ q: number; r: number }>` - массив выделенных тайлов
 
 **Как использовать**:
 ```typescript
 // Получить верхний тайл в позиции
-const topmostHex = map.getHex(x, y);
+const topmostHex = map.getHex(q, r)
 
 // Получить все тайлы в позиции (все уровни)
-const hexStack = map.getHexStack(x, y);
-
-// Получить тайл на конкретном уровне
-const hexAtLevel = map.getHex(x, y, level);
+const hexStack = map.getHexStack(q, r)
 
 // Разместить тайл на уровне
-const hex = new Hex(x, y, terrain);
-hex.height = targetLevel;
-map.setHex(x, y, hex);
+const hex = new Hex(q, r, terrain)
+hex.height = targetLevel
+map.setHex(q, r, hex)
 ```
 
-### 8. Синхронизация Выделения Тайлов
+### 6. Синхронизация Выделения Тайлов
 
-**Описание**: Рамка выделения (`selectionMeshRef`) должна синхронизироваться с позицией тайла при перемещении и изменении высоты.
+**Описание**: Рамка выделения (`selectionMeshesRef`) должна синхронизироваться с позицией тайла при перемещении и изменении высоты.
 
-**Проблема**: При асинхронном обновлении 3D мешей тайлов (`updateHexMesh`, `moveHex`, изменение высоты через R/F) выделение может отставать по вертикальной позиции, так как меш еще не создан или не обновлен в `hexMeshesRef`.
+**Проблема**: При асинхронном обновлении 3D мешей тайлов (`updateHexMesh`, `moveHex`, изменение высоты через R/F) выделение может отставать по вертикальной позиции.
 
 **Решение**: Использование двойного `requestAnimationFrame` для гарантии завершения рендеринга Three.js перед обновлением выделения:
 
 ```typescript
 // После асинхронного обновления меша
-await updateHexMesh(x, y, height);
+await updateHexMesh(q, r, height)
 requestAnimationFrame(() => {
   requestAnimationFrame(() => {
-    setSelectedHex({ ...selectedHex }); // Триггерит useEffect для обновления выделения
-  });
-});
-```
-
-**В useEffect для выделения**:
-```typescript
-useEffect(() => {
-  // ...
-  // Всегда используем двойной requestAnimationFrame для гарантии синхронизации
-  requestAnimationFrame(() => {
-    requestAnimationFrame(updateHighlight);
-  });
-}, [selectedHex]);
+    setSelectedHexes([...selectedHexes]) // Триггерит useEffect для обновления выделения
+  })
+})
 ```
 
 **Применяется в**:
 - `moveHex`: После перемещения тайла
 - Изменение высоты (R/F): После изменения уровня тайла
-- `updateHexMesh`: После обновления меша тайла (для кешированных моделей)
+- `updateHexMesh`: После обновления меша тайла
 
-**Принцип**: Всегда ждать два кадра рендеринга перед обновлением выделения, чтобы убедиться, что Three.js полностью обновил позицию меша.
+### 7. Система Координат
+
+**Осевые координаты (q, r)**:
+- Все внутренние операции используют осевые координаты `(q, r)`
+- Формула расстояния: `distance(a, b) = (|a.q - b.q| + |a.q + a.r - b.q - b.r| + |a.r - b.r|) / 2`
+- Соседи вычисляются единообразно без условных операторов
+- Сериализация использует осевые координаты по умолчанию (версия формата 2.0)
 
 ## Правила Разработки
 
 ### 1. Новый функционал
 
-- **Редактор карт**: Разрабатывается в `editor-nextjs/` на React
-- **Игровая логика**: Добавляется в `js/core/` на Vanilla JS
-- **Общие классы**: Портируются в TypeScript в `editor-nextjs/lib/game/`
+- Разрабатывается в TypeScript
+- Следует существующим паттернам и архитектуре
+- Покрывается тестами где применимо
 
 ### 2. Тестирование
 
-- **Unit тесты**: Jest для vanilla JS кода
-- **Property тесты**: fast-check для проверки инвариантов
-- **Тестовые файлы**: `js/__tests__/` для основного проекта
-- Фокус на критических компонентах (GameState, Combat, AI)
+- **Unit тесты**: Vitest для TypeScript кода
+- **Тестовые файлы**: `lib/__tests__/`
+- Фокус на критических компонентах (MapSerializer, HexCoordinateConverter)
 
 ### 3. Производительность
 
-- **3D рендеринг**: Использовать viewport culling и LOD где возможно
-- **Загрузка моделей**: Таймауты и fallback геометрия
-- **UI обновления**: Минимизировать перерисовки (React.memo для React)
-- **Game loop**: Не блокировать основной поток
+- **3D рендеринг**: Использование кеширования моделей
+- **Загрузка моделей**: Асинхронная загрузка с кешированием
+- **UI обновления**: Минимизировать ререндеры (`React.memo` где применимо)
+- **Refs**: Использовать refs для больших структур данных
+
+### 4. Коммиты
+
+- Осмысленные сообщения коммитов
+- Небольшие, атомарные изменения
+- Тесты проходят перед коммитом
 
