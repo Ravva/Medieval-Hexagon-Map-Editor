@@ -14,7 +14,8 @@ import {
   SelectionPlus,
   Compass,
   List,
-  Keyboard
+  Keyboard,
+  Sparkle
 } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -34,6 +35,7 @@ import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Hex, TERRAIN_CONFIG, TERRAIN_TYPES, type TerrainType } from '@/lib/game/Hex'
 import { Map as GameMap } from '@/lib/game/Map'
 import { MapSerializer, type BuildingData } from '@/lib/game/MapSerializer'
@@ -43,9 +45,10 @@ import { cn } from '@/lib/utils'
 
 type EditMode = 'terrain' | 'building'
 
-type MapSize = 'small' | 'medium' | 'large' | 'very-large'
+type MapSize = 'tiny' | 'small' | 'medium' | 'large' | 'very-large'
 
 const MAP_SIZES: Record<MapSize, { label: string; width: number; height: number }> = {
+  'tiny': { label: 'Tiny', width: 10, height: 10 },
   'small': { label: 'Small', width: 25, height: 25 },
   'medium': { label: 'Medium', width: 50, height: 50 },
   'large': { label: 'Large', width: 75, height: 75 },
@@ -428,7 +431,7 @@ export default function MapEditor() {
 
   const [isLoading, setIsLoading] = useState(true)
   const [loadingText, setLoadingText] = useState('Initializing...')
-  const [mapSize, setMapSize] = useState<MapSize>('small')
+  const [mapSize, setMapSize] = useState<MapSize>('tiny')
   const [selectedTerrain, setSelectedTerrain] = useState<TerrainType>(TERRAIN_TYPES.PLAINS)
   const [editMode, setEditMode] = useState<EditMode>('terrain')
   const [selectedHexes, setSelectedHexes] = useState<Array<{ q: number; r: number }>>([])
@@ -453,6 +456,11 @@ export default function MapEditor() {
   const [selectedFolder, setSelectedFolder] = useState<string>('')
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [saveMapName, setSaveMapName] = useState('')
+  const [generateDialogOpen, setGenerateDialogOpen] = useState(false)
+  const [generateMapSize, setGenerateMapSize] = useState<MapSize>('tiny')
+  const [generatePrompt, setGeneratePrompt] = useState('')
+  const [generateBiome, setGenerateBiome] = useState<'plains' | 'water' | 'forest' | 'mountain'>('plains')
+  const [isGenerating, setIsGenerating] = useState(false)
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
   useEffect(() => {
@@ -682,7 +690,7 @@ export default function MapEditor() {
 
   const handleSaveMap = () => {
     if (!mapRef.current) {
-      showNotification('error', 'Нет карты для сохранения')
+      showNotification('error', 'No map to save')
       return
     }
 
@@ -696,7 +704,7 @@ export default function MapEditor() {
 
     try {
       setSaveDialogOpen(false)
-      setLoadingText('Сохранение карты...')
+      setLoadingText('Saving map...')
       setIsLoading(true)
 
       // Collect building data
@@ -717,7 +725,7 @@ export default function MapEditor() {
       // Validate before saving
       const validation = MapSerializer.validate(JSON.parse(jsonString))
       if (!validation.valid) {
-        throw new Error(`Ошибка валидации: ${validation.errors.join(', ')}`)
+        throw new Error(`Validation error: ${validation.errors.join(', ')}`)
       }
 
       // Create download link
@@ -733,12 +741,110 @@ export default function MapEditor() {
       URL.revokeObjectURL(url)
 
       setIsLoading(false)
-      showNotification('success', 'Карта успешно сохранена')
+      showNotification('success', 'Map saved successfully')
       console.log('Map saved successfully')
     } catch (error) {
       console.error('Failed to save map:', error)
       setIsLoading(false)
-      showNotification('error', `Ошибка сохранения: ${error instanceof Error ? error.message : String(error)}`)
+      showNotification('error', `Save error: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  const handleGenerateMap = async () => {
+    setGenerateDialogOpen(true)
+  }
+
+  const confirmGenerateMap = async () => {
+    try {
+      if (!generatePrompt.trim()) {
+        showNotification('error', 'Please enter a generation prompt')
+        return
+      }
+
+      setGenerateDialogOpen(false)
+      setIsGenerating(true)
+      setLoadingText('Generating map via LLM...')
+      setIsLoading(true)
+
+      const mapDimensions = MAP_SIZES[generateMapSize]
+
+      // Call API to generate map (returns serialized map format)
+      const response = await fetch('/api/llm/generate-map', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          width: mapDimensions.width,
+          height: mapDimensions.height,
+          prompt: generatePrompt.trim(),
+          biome: generateBiome,
+          returnFormat: 'serialized',
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Map generation error')
+      }
+
+      const data = await response.json()
+      if (!data.success || !data.mapData) {
+        throw new Error('Invalid API response format')
+      }
+
+      setLoadingText('Loading map...')
+
+      // Update map size if different
+      if (data.mapSize && data.mapSize !== mapSize) {
+        setMapSize(data.mapSize as MapSize)
+      }
+
+      // Deserialize map using MapSerializer (same as loading from file)
+      const jsonString = JSON.stringify(data.mapData)
+      const validation = MapSerializer.validate(data.mapData)
+      if (!validation.valid) {
+        throw new Error(`Validation error: ${validation.errors.join(', ')}`)
+      }
+
+      const { map, mapSize: loadedMapSize, buildings } = MapSerializer.deserialize(jsonString)
+
+      // Update map size if different
+      if (loadedMapSize !== mapSize) {
+        setMapSize(loadedMapSize)
+      }
+
+      // Clear existing map
+      hexMeshesRef.current.forEach((mesh) => {
+        sceneRef.current?.remove(mesh)
+      })
+      hexMeshesRef.current.clear()
+
+      buildingObjectsRef.current.forEach((building) => {
+        sceneRef.current?.remove(building)
+      })
+      buildingObjectsRef.current.clear()
+
+      // Set new map
+      mapRef.current = map
+
+      // Load buildings if present (buildings are not generated by LLM yet, but structure is ready)
+      // Note: LLM generation currently only generates terrain tiles, not buildings
+
+      // Rebuild map visualization
+      setLoadingText('Building map...')
+      await buildMap()
+
+      setSelectedHexes([])
+      setIsLoading(false)
+      setIsGenerating(false)
+      // Initialize history after generating map
+      saveHistoryState()
+      showNotification('success', `Map ${mapDimensions.width}x${mapDimensions.height} generated successfully`)
+      console.log('Map generated successfully')
+    } catch (error) {
+      console.error('Failed to generate map:', error)
+      setIsLoading(false)
+      setIsGenerating(false)
+      showNotification('error', `Generation error: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 
@@ -751,7 +857,7 @@ export default function MapEditor() {
       if (!file) return
 
       try {
-        setLoadingText('Загрузка карты...')
+        setLoadingText('Loading map...')
         setIsLoading(true)
 
         const text = await file.text()
@@ -761,12 +867,12 @@ export default function MapEditor() {
         try {
           parsedData = JSON.parse(text)
         } catch (parseError) {
-          throw new Error('Файл не является валидным JSON')
+          throw new Error('File is not valid JSON')
         }
 
         const validation = MapSerializer.validate(parsedData)
         if (!validation.valid) {
-          throw new Error(`Неверный формат файла: ${validation.errors.join(', ')}`)
+          throw new Error(`Invalid file format: ${validation.errors.join(', ')}`)
         }
 
         const { map, mapSize: loadedMapSize, buildings, metadata } = MapSerializer.deserialize(text)
@@ -795,7 +901,7 @@ export default function MapEditor() {
 
         // Load buildings if present
         if (buildings && buildings.length > 0) {
-          setLoadingText(`Загрузка зданий (${buildings.length})...`)
+          setLoadingText(`Loading buildings (${buildings.length})...`)
           for (const building of buildings) {
             await placeBuilding(building.q, building.r, building.modelData)
           }
@@ -806,12 +912,12 @@ export default function MapEditor() {
         // Инициализируем историю после загрузки карты
         saveHistoryState()
         const mapName = metadata?.name || file.name
-        showNotification('success', `Карта "${mapName}" успешно загружена`)
+        showNotification('success', `Map "${mapName}" loaded successfully`)
         console.log('Map loaded successfully')
       } catch (error) {
         console.error('Failed to load map:', error)
         setIsLoading(false)
-        showNotification('error', `Ошибка загрузки: ${error instanceof Error ? error.message : String(error)}`)
+        showNotification('error', `Load error: ${error instanceof Error ? error.message : String(error)}`)
       }
     }
     input.click()
@@ -822,7 +928,7 @@ export default function MapEditor() {
 
     // Не показываем индикатор загрузки во время undo/redo, чтобы не блокировать UI
     if (!isUndoRedoInProgressRef.current) {
-      setLoadingText('Построение карты...')
+      setLoadingText('Building map...')
     }
 
     // Clear hexes
@@ -996,11 +1102,11 @@ export default function MapEditor() {
       await buildMap()
       setSelectedHexes([])
       console.log('Undo completed - Index after undo:', historyIndexRef.current, 'History length:', historyRef.current.length, 'meshes in scene:', hexMeshesRef.current.size)
-      showNotification('success', 'Отменено')
+      showNotification('success', 'Undone')
       return true
     } catch (error) {
       console.error('Failed to undo:', error)
-      showNotification('error', 'Ошибка отмены')
+      showNotification('error', 'Undo error')
       return false
     }
   }
@@ -1039,11 +1145,11 @@ export default function MapEditor() {
       await buildMap()
       setSelectedHexes([])
       console.log('Redo completed - Index after redo:', historyIndexRef.current, 'History length:', historyRef.current.length, 'meshes in scene:', hexMeshesRef.current.size)
-      showNotification('success', 'Повторено')
+      showNotification('success', 'Redone')
       return true
     } catch (error) {
       console.error('Failed to redo:', error)
-      showNotification('error', 'Ошибка повтора')
+      showNotification('error', 'Redo error')
       return false
     } finally {
       // Снимаем флаг после завершения redo
@@ -1966,11 +2072,20 @@ export default function MapEditor() {
           </div>
         </ScrollArea>
         <div className="p-4 border-t border-border flex flex-col gap-2">
+          <Button
+            className="w-full font-bold shadow-lg shadow-primary/20 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600"
+            onClick={handleGenerateMap}
+            disabled={isGenerating}
+          >
+            <Sparkle size={16} className="mr-2" />
+            {isGenerating ? 'Generating...' : 'Generate Map (AI)'}
+          </Button>
           <div className="grid grid-cols-2 gap-2">
             <Button
               variant="outline"
               className="flex-1 font-bold"
               onClick={handleLoadMap}
+              disabled={isGenerating}
             >
               <FolderOpen size={16} className="mr-2" />
               Open
@@ -1978,6 +2093,7 @@ export default function MapEditor() {
             <Button
               className="flex-1 font-bold shadow-lg shadow-primary/20"
               onClick={handleSaveMap}
+              disabled={isGenerating}
             >
               <FloppyDisk size={16} className="mr-2" />
               Save
@@ -1989,16 +2105,16 @@ export default function MapEditor() {
         <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Сохранить карту</DialogTitle>
+              <DialogTitle>Save Map</DialogTitle>
               <DialogDescription>
-                Введите название для вашей карты
+                Enter a name for your map
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
               <Input
                 value={saveMapName}
                 onChange={(e) => setSaveMapName(e.target.value)}
-                placeholder="Название карты"
+                placeholder="Map name"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     confirmSaveMap()
@@ -2009,10 +2125,78 @@ export default function MapEditor() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>
-                Отмена
+                Cancel
               </Button>
               <Button onClick={confirmSaveMap}>
-                Сохранить
+                Save
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Generate Map Dialog */}
+        <Dialog open={generateDialogOpen} onOpenChange={setGenerateDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Sparkle size={20} className="text-cyan-400" />
+                Generate Map (AI)
+              </DialogTitle>
+              <DialogDescription>
+                Describe the map you want to generate
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="generate-prompt">Description</Label>
+                <Textarea
+                  id="generate-prompt"
+                  value={generatePrompt}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setGeneratePrompt(e.target.value)}
+                  placeholder="e.g., A peaceful village with a river flowing through it, surrounded by forests"
+                  rows={4}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="generate-size">Map Size</Label>
+                <Select value={generateMapSize} onValueChange={(value) => setGenerateMapSize(value as MapSize)}>
+                  <SelectTrigger id="generate-size">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(MAP_SIZES).map(([key, { label, width, height }]) => (
+                      <SelectItem key={key} value={key}>
+                        {label} ({width}×{height})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="generate-biome">Primary Biome</Label>
+                <Select value={generateBiome} onValueChange={(value) => setGenerateBiome(value as typeof generateBiome)}>
+                  <SelectTrigger id="generate-biome">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="plains">Plains</SelectItem>
+                    <SelectItem value="forest">Forest</SelectItem>
+                    <SelectItem value="mountain">Mountain</SelectItem>
+                    <SelectItem value="water">Water</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+                <p className="font-semibold mb-1">Note:</p>
+                <p>Generation may take 5-10 seconds. The current map will be replaced.</p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setGenerateDialogOpen(false)} disabled={isGenerating}>
+                Cancel
+              </Button>
+              <Button onClick={confirmGenerateMap} disabled={isGenerating || !generatePrompt.trim()}>
+                {isGenerating ? 'Generating...' : 'Generate'}
               </Button>
             </DialogFooter>
           </DialogContent>

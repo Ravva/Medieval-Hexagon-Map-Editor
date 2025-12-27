@@ -63,7 +63,7 @@ assets/
 
 ## Локальное окружение
 
-- **Разработка**: 
+- **Разработка**:
   - Next.js dev server с Turbopack (порт 3000) - команда `bun dev`
   - Next.js dev server с webpack (порт 3000) - команда `bun dev:webpack` (fallback)
 - **Тестирование**: Vitest с jsdom окружением

@@ -59,7 +59,7 @@ export interface MapFileFormat {
     description?: string
     createdAt: number
     modifiedAt: number
-    mapSize: 'small' | 'medium' | 'large' | 'very-large'
+    mapSize: 'tiny' | 'small' | 'medium' | 'large' | 'very-large'
   }
   map: {
     width: number
@@ -81,7 +81,7 @@ export interface MapFileFormatV1 {
     description?: string
     createdAt: number
     modifiedAt: number
-    mapSize: 'small' | 'medium' | 'large' | 'very-large'
+    mapSize: 'tiny' | 'small' | 'medium' | 'large' | 'very-large'
   }
   map: {
     width: number
@@ -110,7 +110,7 @@ export class MapSerializer {
    */
   static serialize(
     map: GameMap,
-    mapSize: 'small' | 'medium' | 'large' | 'very-large',
+    mapSize: 'tiny' | 'small' | 'medium' | 'large' | 'very-large',
     options: {
       name?: string
       description?: string
@@ -204,7 +204,7 @@ export class MapSerializer {
    */
   static deserialize(jsonString: string): {
     map: GameMap
-    mapSize: 'small' | 'medium' | 'large' | 'very-large'
+    mapSize: 'tiny' | 'small' | 'medium' | 'large' | 'very-large'
     buildings?: BuildingData[]
     metadata?: MapFileFormat['metadata']
   } {

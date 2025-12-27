@@ -10,17 +10,17 @@ graph TB
     Editor --> EditorState[Editor State<br/>React Hooks]
     Editor --> ThreeEditor[Three.js Editor Scene]
     Editor --> MapSystem[Map System<br/>TypeScript Classes]
-    
+
     MapSystem --> Hex[Hex Class]
     MapSystem --> MapSerializer[Map Serializer]
-    
+
     ThreeEditor --> ModelLoader[Model Loader]
     ModelLoader --> Assets[3D Assets]
-    
+
     subgraph "Persistence Layer"
         LS[Local Storage<br/>Map Files]
     end
-    
+
     EditorState --> LS
     MapSerializer --> LS
 ```
@@ -50,11 +50,11 @@ const MapEditor = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sceneRef = useRef<THREE.Scene | null>(null)
   const mapRef = useRef<GameMap | null>(null)
-  
+
   useEffect(() => {
     // Инициализация Three.js сцены
   }, [])
-  
+
   return <canvas ref={canvasRef} />
 }
 ```
