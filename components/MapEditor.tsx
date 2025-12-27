@@ -416,6 +416,7 @@ export default function MapEditor() {
   const hexMeshesRef = useRef<Map<string, THREE.Mesh>>(new Map())
   const buildingObjectsRef = useRef<Map<string, THREE.Group>>(new Map())
   const selectionMeshRef = useRef<THREE.Mesh | null>(null)
+  const selectionMeshesRef = useRef<Map<string, THREE.Mesh>>(new Map())
   const animationFrameRef = useRef<number | null>(null)
   const draggedModelRef = useRef<{ obj: string; mtl: string; name: string } | null>(null)
   const tileHeightRef = useRef<number>(1.0) // Will be updated from first loaded model
@@ -423,6 +424,7 @@ export default function MapEditor() {
   const historyRef = useRef<HistoryState[]>([])
   const historyIndexRef = useRef<number>(-1)
   const maxHistorySize = 50
+  const isUndoRedoInProgressRef = useRef<boolean>(false)
 
   const [isLoading, setIsLoading] = useState(true)
   const [loadingText, setLoadingText] = useState('Initializing...')
@@ -817,7 +819,11 @@ export default function MapEditor() {
 
   const buildMap = async () => {
     if (!sceneRef.current || !mapRef.current) return
-    setLoadingText('Построение карты...')
+
+    // Не показываем индикатор загрузки во время undo/redo, чтобы не блокировать UI
+    if (!isUndoRedoInProgressRef.current) {
+      setLoadingText('Построение карты...')
+    }
 
     // Clear hexes
     hexMeshesRef.current.forEach((mesh) => {
@@ -833,10 +839,12 @@ export default function MapEditor() {
 
     // Build meshes for all hexes in all stacks
     const promises: Promise<void>[] = []
+    let hexCount = 0
 
     mapRef.current.hexes.forEach((hexStack, key) => {
       if (hexStack && hexStack.length > 0) {
         hexStack.forEach(hex => {
+          hexCount++
           const promise = (async () => {
             const mesh = await createHexMesh(hex)
             if (mesh && sceneRef.current) {
@@ -850,6 +858,7 @@ export default function MapEditor() {
     })
 
     await Promise.all(promises)
+    console.log('buildMap completed - hexes created:', hexCount, 'meshes in ref:', hexMeshesRef.current.size)
   }
 
   const updateHexMesh = async (q: number, r: number, height?: number) => {
@@ -917,41 +926,76 @@ export default function MapEditor() {
 
   const saveHistoryState = () => {
     if (!mapRef.current) return
+    // Не сохраняем историю во время undo/redo операций
+    if (isUndoRedoInProgressRef.current) {
+      console.log('Skipping saveHistoryState during undo/redo')
+      return
+    }
     try {
       const mapJson = MapSerializer.serialize(mapRef.current, mapSize, {})
       const state: HistoryState = {
         map: mapJson,
         timestamp: Date.now(),
       }
-      
+
+      // Если история пустая или индекс -1, создаем новый массив
+      if (historyRef.current.length === 0 || historyIndexRef.current === -1) {
+        historyRef.current = [state]
+        historyIndexRef.current = 0
+        console.log('History initialized, length:', historyRef.current.length, 'index:', historyIndexRef.current)
+        return
+      }
+
       // Удаляем все состояния после текущего индекса (если делаем undo, а потом новое действие)
       historyRef.current = historyRef.current.slice(0, historyIndexRef.current + 1)
-      
+
       // Добавляем новое состояние
       historyRef.current.push(state)
-      
+
       // Ограничиваем размер истории
       if (historyRef.current.length > maxHistorySize) {
-        historyRef.current.shift()
-      } else {
-        historyIndexRef.current = historyRef.current.length - 1
+        const removedCount = historyRef.current.length - maxHistorySize
+        historyRef.current = historyRef.current.slice(removedCount)
       }
+
+      // Всегда устанавливаем индекс на последний элемент после добавления
+      historyIndexRef.current = historyRef.current.length - 1
+      console.log('History saved, length:', historyRef.current.length, 'index:', historyIndexRef.current)
     } catch (error) {
       console.warn('Failed to save history state:', error)
     }
   }
 
   const undo = async (): Promise<boolean> => {
-    if (historyIndexRef.current <= 0 || !mapRef.current || !sceneRef.current) return false
-    
+    if (!mapRef.current || !sceneRef.current) return false
+
+    console.log('Undo attempt - Index:', historyIndexRef.current, 'History length:', historyRef.current.length)
+
+    // Проверяем, что есть состояние для undo (индекс должен быть больше 0)
+    // Если индекс равен 0, значит мы уже на первом состоянии и undo невозможен
+    if (historyIndexRef.current <= 0) {
+      console.log('Undo failed: Already at first state')
+      return false
+    }
+
+    // Уменьшаем индекс и загружаем предыдущее состояние
     historyIndexRef.current--
     const state = historyRef.current[historyIndexRef.current]
-    
+
+    if (!state) {
+      console.error('Undo state not found at index:', historyIndexRef.current, 'history length:', historyRef.current.length)
+      return false
+    }
+
+    console.log('Undo: Loading state at index', historyIndexRef.current)
+
     try {
       const { map } = MapSerializer.deserialize(state.map)
       mapRef.current = map
+      console.log('Undo: Map deserialized, hex count:', map.hexes.size)
       await buildMap()
       setSelectedHexes([])
+      console.log('Undo completed - Index after undo:', historyIndexRef.current, 'History length:', historyRef.current.length, 'meshes in scene:', hexMeshesRef.current.size)
       showNotification('success', 'Отменено')
       return true
     } catch (error) {
@@ -962,22 +1006,48 @@ export default function MapEditor() {
   }
 
   const redo = async (): Promise<boolean> => {
-    if (historyIndexRef.current >= historyRef.current.length - 1 || !mapRef.current || !sceneRef.current) return false
-    
-    historyIndexRef.current++
-    const state = historyRef.current[historyIndexRef.current]
-    
+    if (!mapRef.current || !sceneRef.current) return false
+
+    console.log('Redo attempt - Index:', historyIndexRef.current, 'History length:', historyRef.current.length)
+
+    // Проверяем, что есть состояние для redo (текущий индекс должен быть меньше последнего)
+    // Если индекс равен length - 1, значит мы уже на последнем состоянии и redo невозможен
+    if (historyIndexRef.current >= historyRef.current.length - 1) {
+      console.log('Redo failed: Already at last state')
+      return false
+    }
+
+    // Устанавливаем флаг, чтобы предотвратить сохранение истории во время redo
+    isUndoRedoInProgressRef.current = true
+
     try {
+      // Увеличиваем индекс и загружаем следующее состояние
+      historyIndexRef.current++
+      const state = historyRef.current[historyIndexRef.current]
+
+      if (!state) {
+        console.error('Redo state not found at index:', historyIndexRef.current, 'history length:', historyRef.current.length)
+        isUndoRedoInProgressRef.current = false
+        return false
+      }
+
+      console.log('Redo: Loading state at index', historyIndexRef.current)
+
       const { map } = MapSerializer.deserialize(state.map)
       mapRef.current = map
+      console.log('Redo: Map deserialized, hex count:', map.hexes.size)
       await buildMap()
       setSelectedHexes([])
+      console.log('Redo completed - Index after redo:', historyIndexRef.current, 'History length:', historyRef.current.length, 'meshes in scene:', hexMeshesRef.current.size)
       showNotification('success', 'Повторено')
       return true
     } catch (error) {
       console.error('Failed to redo:', error)
       showNotification('error', 'Ошибка повтора')
       return false
+    } finally {
+      // Снимаем флаг после завершения redo
+      isUndoRedoInProgressRef.current = false
     }
   }
 
@@ -986,7 +1056,7 @@ export default function MapEditor() {
 
     // Копируем все выделенные тайлы
     const hexes: ClipboardData['hexes'] = []
-    
+
     for (const selected of selectedHexes) {
       const hex = mapRef.current.getHex(selected.q, selected.r)
       if (hex) {
@@ -1058,7 +1128,7 @@ export default function MapEditor() {
 
     // Поддержка как нового формата (hexes), так и старого (hex) для обратной совместимости
     const hexesToPaste = clipboardData.hexes || (clipboardData.hex ? [clipboardData.hex] : [])
-    
+
     if (hexesToPaste.length === 0) {
       showNotification('error', 'Буфер обмена пуст')
       return false
@@ -1131,6 +1201,9 @@ export default function MapEditor() {
 
     // Обновляем выделение на вставленные тайлы
     setSelectedHexes(pastedHexes)
+
+    // Сохраняем состояние после вставки для истории
+    saveHistoryState()
 
     showNotification('success', `Вставлено тайлов: ${pastedCount}`)
     return true
@@ -1534,67 +1607,141 @@ export default function MapEditor() {
     }
   }, [selectedHexes])
 
+  // Функция для создания меша выделения
+  const createSelectionMesh = (): THREE.Mesh => {
+    const scale = 3.5
+    const R = 2 / Math.sqrt(3)
+    const outerR = R * scale * 1.05
+    const innerR = R * scale * 0.95
+
+    const selectionShape = new THREE.Shape()
+    for (let i = 0; i < 6; i++) {
+      const angle = (i * 60) * (Math.PI / 180)
+      const x = outerR * Math.cos(angle)
+      const y = outerR * Math.sin(angle)
+      if (i === 0) selectionShape.moveTo(x, y)
+      else selectionShape.lineTo(x, y)
+    }
+    selectionShape.closePath()
+
+    const selectionHole = new THREE.Path()
+    for (let i = 0; i < 6; i++) {
+      const angle = (i * 60) * (Math.PI / 180)
+      const x = innerR * Math.cos(angle)
+      const y = innerR * Math.sin(angle)
+      if (i === 0) selectionHole.moveTo(x, y)
+      else selectionHole.lineTo(x, y)
+    }
+    selectionHole.closePath()
+    selectionShape.holes.push(selectionHole)
+
+    const selectionGeom = new THREE.ShapeGeometry(selectionShape)
+    selectionGeom.rotateX(-Math.PI / 2)
+    selectionGeom.rotateY(Math.PI / 2)
+
+    const selectionMat = new THREE.MeshBasicMaterial({
+      color: 0x00ffff, // Bright Cyan (Primary)
+      transparent: true,
+      opacity: 0.8,
+      side: THREE.DoubleSide,
+      depthTest: false,
+      depthWrite: false
+    })
+    const sMesh = new THREE.Mesh(selectionGeom, selectionMat)
+    sMesh.name = '__selectionHighlight'
+    sMesh.renderOrder = 2000
+    sMesh.visible = false
+    return sMesh
+  }
+
   // Selection Highlight Update Effect
   useEffect(() => {
-    if (!selectionMeshRef.current || !mapRef.current) return
+    if (!sceneRef.current || !mapRef.current) return
 
-    // Показываем выделение для первого выделенного hex (можно расширить для множественных)
-    if (selectedHexes.length > 0) {
-      const selectedHex = selectedHexes[0]
-      // Always get the topmost hex at this position
-      const hex = mapRef.current.getHex(selectedHex.q, selectedHex.r)
-      if (!hex) {
-        selectionMeshRef.current.visible = false
-        return
+    // Удаляем все старые меши выделения, которых нет в текущем выделении
+    const currentKeys = new Set(selectedHexes.map(h => `${h.q},${h.r}`))
+    selectionMeshesRef.current.forEach((mesh, key) => {
+      if (!currentKeys.has(key)) {
+        sceneRef.current?.remove(mesh)
+        selectionMeshesRef.current.delete(key)
       }
+    })
 
-      const [wX, wZ] = hexToWorld(selectedHex.q, selectedHex.r)
+    // Создаем или обновляем меши выделения для всех выделенных hex
+    if (selectedHexes.length > 0 && mapRef.current && sceneRef.current) {
+      selectedHexes.forEach(selectedHex => {
+        const hexKey = `${selectedHex.q},${selectedHex.r}`
 
-      const hexStack = mapRef.current.getHexStack(selectedHex.q, selectedHex.r)
-      const topmostHex = hexStack.length > 0 ? hexStack[hexStack.length - 1] : hex
-      const meshKey = topmostHex ? `${selectedHex.q},${selectedHex.r}_${topmostHex.height}` : `${selectedHex.q},${selectedHex.r}`
+        // Always get the topmost hex at this position
+        const hex = mapRef.current!.getHex(selectedHex.q, selectedHex.r)
+        if (!hex) return
 
-      // Wait for mesh to be available if it's not yet created
-      const updateHighlight = () => {
-        const meshObj = hexMeshesRef.current.get(meshKey)
-        let hValue = 0
+        const [wX, wZ] = hexToWorld(selectedHex.q, selectedHex.r)
+        const hexStack = mapRef.current!.getHexStack(selectedHex.q, selectedHex.r)
+        const topmostHex = hexStack.length > 0 ? hexStack[hexStack.length - 1] : hex
+        const meshKey = topmostHex ? `${selectedHex.q},${selectedHex.r}_${topmostHex.height}` : `${selectedHex.q},${selectedHex.r}`
 
-        if (meshObj) {
-          // Force matrix update to get correct world position
-          meshObj.updateMatrixWorld(true)
-          const box = new THREE.Box3().setFromObject(meshObj)
-          if (!box.isEmpty()) {
-            hValue = box.max.y
+        // Получаем или создаем меш выделения
+        let selectionMesh = selectionMeshesRef.current.get(hexKey)
+        if (!selectionMesh) {
+          selectionMesh = createSelectionMesh()
+          sceneRef.current!.add(selectionMesh)
+          selectionMeshesRef.current.set(hexKey, selectionMesh)
+        }
+
+        // Wait for mesh to be available if it's not yet created
+        const updateHighlight = () => {
+          const meshObj = hexMeshesRef.current.get(meshKey)
+          let hValue = 0
+
+          if (meshObj) {
+            // Force matrix update to get correct world position
+            meshObj.updateMatrixWorld(true)
+            const box = new THREE.Box3().setFromObject(meshObj)
+            if (!box.isEmpty()) {
+              hValue = box.max.y
+            } else {
+              // Fallback: calculate from hex data
+              const LEVEL_HEIGHT = tileHeightRef.current || 0.7
+              const minY = meshObj.position.y
+              hValue = (topmostHex?.height || 0) * LEVEL_HEIGHT - minY + (LEVEL_HEIGHT / 2)
+            }
           } else {
-            // Fallback: calculate from hex data
+            // If mesh not found yet, calculate height from hex data
             const LEVEL_HEIGHT = tileHeightRef.current || 0.7
-            const minY = meshObj.position.y
-            hValue = (topmostHex?.height || 0) * LEVEL_HEIGHT - minY + (LEVEL_HEIGHT / 2)
+            const h = topmostHex ? (topmostHex.height || 0) : 0
+            hValue = h * LEVEL_HEIGHT + (LEVEL_HEIGHT / 2)
           }
-        } else {
-          // If mesh not found yet, calculate height from hex data
-          const LEVEL_HEIGHT = tileHeightRef.current || 0.7
-          const h = topmostHex ? (topmostHex.height || 0) : 0
-          hValue = h * LEVEL_HEIGHT + (LEVEL_HEIGHT / 2)
+
+          if (selectionMesh) {
+            selectionMesh.position.set(wX, hValue + 0.1, wZ)
+            // Mirror the tile's rotation: constant offset PI/2 + hex state rotation
+            selectionMesh.rotation.y = Math.PI / 2 + (topmostHex?.rotation || 0)
+            selectionMesh.visible = true
+            // Force update
+            selectionMesh.updateMatrixWorld(true)
+          }
         }
 
-        if (selectionMeshRef.current) {
-          selectionMeshRef.current.position.set(wX, hValue + 0.1, wZ)
-          // Mirror the tile's rotation: constant offset PI/2 + hex state rotation
-          selectionMeshRef.current.rotation.y = Math.PI / 2 + (topmostHex?.rotation || 0)
-          selectionMeshRef.current.visible = true
-          // Force update
-          selectionMeshRef.current.updateMatrixWorld(true)
-        }
-      }
-
-      // Always use double requestAnimationFrame to ensure mesh is fully updated
-      // This is critical for vertical movement where mesh position changes
-      requestAnimationFrame(() => {
-        requestAnimationFrame(updateHighlight)
+        // Always use double requestAnimationFrame to ensure mesh is fully updated
+        requestAnimationFrame(() => {
+          requestAnimationFrame(updateHighlight)
+        })
       })
+
+      // Скрываем старый одиночный меш выделения (для обратной совместимости)
+      if (selectionMeshRef.current) {
+        selectionMeshRef.current.visible = false
+      }
     } else {
-      selectionMeshRef.current.visible = false
+      // Скрываем все меши выделения
+      selectionMeshesRef.current.forEach(mesh => {
+        mesh.visible = false
+      })
+      // Скрываем старый одиночный меш выделения (для обратной совместимости)
+      if (selectionMeshRef.current) {
+        selectionMeshRef.current.visible = false
+      }
     }
   }, [selectedHexes])
 
