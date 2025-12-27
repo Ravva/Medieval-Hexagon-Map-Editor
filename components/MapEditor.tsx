@@ -68,6 +68,20 @@ interface AssetCategory {
   folders: AssetFolder[]
 }
 
+interface ClipboardData {
+  hex: {
+    q: number
+    r: number
+    terrain: TerrainType
+    height: number
+    rotation?: number
+    modelData?: { obj: string; mtl: string; name: string }
+    hasRiver?: boolean
+  }
+  sourceHeight: number
+  globalLevel: number
+}
+
 // Глобальный рендерер и сцена для превью (чтобы не превышать лимит WebGL контекстов)
 let sharedPreviewRenderer: THREE.WebGLRenderer | null = null
 let sharedPreviewScene: THREE.Scene | null = null
@@ -390,6 +404,7 @@ export default function MapEditor() {
   const animationFrameRef = useRef<number | null>(null)
   const draggedModelRef = useRef<{ obj: string; mtl: string; name: string } | null>(null)
   const tileHeightRef = useRef<number>(1.0) // Will be updated from first loaded model
+  const clipboardDataRef = useRef<ClipboardData | null>(null)
 
   const [isLoading, setIsLoading] = useState(true)
   const [loadingText, setLoadingText] = useState('Initializing...')
@@ -405,6 +420,7 @@ export default function MapEditor() {
   const isPanningRef = useRef(false)   // Middle click pan
   const dragStartHexRef = useRef<{ q: number; r: number } | null>(null)
   const lastMouseRef = useRef({ x: 0, y: 0 })
+  const lastMouseHexRef = useRef<{ q: number; r: number } | null>(null)
   const cameraDistanceRef = useRef(150)
   const cameraAngleXRef = useRef(Math.PI / 4)
   const cameraAngleYRef = useRef(Math.PI / 4)
@@ -875,6 +891,128 @@ export default function MapEditor() {
     }
   }
 
+  const copyHex = (): boolean => {
+    if (!selectedHex || !mapRef.current) return false
+
+    // Всегда копируем верхний тайл в ячейке
+    const hex = mapRef.current.getHex(selectedHex.q, selectedHex.r)
+    if (!hex) {
+      showNotification('error', 'Нет тайла для копирования')
+      return false
+    }
+
+    const clipboardData: ClipboardData = {
+      hex: {
+        q: hex.q,
+        r: hex.r,
+        terrain: hex.terrain,
+        height: hex.height,
+        rotation: hex.rotation,
+        modelData: hex.modelData,
+        hasRiver: hex.hasRiver,
+      },
+      sourceHeight: hex.height,
+      globalLevel: currentHeightLevel,
+    }
+
+    // Сохраняем в localStorage для персистентности
+    try {
+      localStorage.setItem('mapEditor_clipboard', JSON.stringify(clipboardData))
+    } catch (error) {
+      console.warn('Failed to save clipboard to localStorage:', error)
+    }
+
+    // Сохраняем в ref
+    clipboardDataRef.current = clipboardData
+
+    showNotification('success', 'Тайл скопирован')
+    return true
+  }
+
+  const pasteHex = async (q: number, r: number): Promise<boolean> => {
+    if (!mapRef.current) return false
+
+    // Получаем данные из буфера обмена
+    let clipboardData: ClipboardData | null = clipboardDataRef.current
+
+    // Если нет в ref, пытаемся загрузить из localStorage
+    if (!clipboardData) {
+      try {
+        const stored = localStorage.getItem('mapEditor_clipboard')
+        if (stored) {
+          clipboardData = JSON.parse(stored)
+          clipboardDataRef.current = clipboardData
+        }
+      } catch (error) {
+        console.warn('Failed to load clipboard from localStorage:', error)
+      }
+    }
+
+    if (!clipboardData) {
+      showNotification('error', 'Буфер обмена пуст')
+      return false
+    }
+
+    // Проверяем, что координаты валидны
+    if (!mapRef.current.isValidCoordinate(q, r)) {
+      showNotification('error', 'Неверная позиция для вставки')
+      return false
+    }
+
+    // Создаем новый Hex
+    const newHex = new Hex(
+      q,
+      r,
+      clipboardData.hex.terrain
+    )
+
+    // Вычисляем целевую высоту с учетом глобального уровня
+    // Сохраняем относительную высоту (разница между высотой тайла и глобальным уровнем при копировании)
+    const heightOffset = clipboardData.hex.height - clipboardData.globalLevel
+    let targetHeight = currentHeightLevel + heightOffset
+
+    // Проверяем, что целевая высота в допустимых пределах
+    if (targetHeight < 0) {
+      targetHeight = 0
+    }
+    if (targetHeight > 4) {
+      showNotification('error', 'Максимальная высота достигнута')
+      return false
+    }
+
+    // Проверяем, свободен ли целевой уровень
+    if (mapRef.current.hasHex(q, r, targetHeight)) {
+      // Ищем следующий свободный уровень выше текущего глобального
+      let nextLevel = currentHeightLevel
+      while (nextLevel <= 4 && mapRef.current.hasHex(q, r, nextLevel)) {
+        nextLevel++
+      }
+      if (nextLevel > 4) {
+        showNotification('error', 'Нет свободных уровней')
+        return false
+      }
+      targetHeight = nextLevel
+    }
+
+    // Применяем свойства из скопированного тайла
+    newHex.height = targetHeight
+    newHex.rotation = clipboardData.hex.rotation || 0
+    newHex.modelData = clipboardData.hex.modelData
+    newHex.hasRiver = clipboardData.hex.hasRiver || false
+
+    // Устанавливаем тайл на карту
+    mapRef.current.setHex(q, r, newHex)
+
+    // Обновляем визуализацию
+    await updateHexMesh(q, r, targetHeight)
+
+    // Обновляем выделение
+    setSelectedHex({ q, r })
+
+    showNotification('success', 'Тайл вставлен')
+    return true
+  }
+
   const removeHex = async (q: number, r: number) => {
     if (!sceneRef.current || !mapRef.current) return
 
@@ -1218,6 +1356,27 @@ export default function MapEditor() {
         await removeHex(selectedHex.q, selectedHex.r)
         setSelectedHex(null)
       }
+
+      // Copy/Paste with Ctrl+C / Ctrl+V (or Cmd on Mac)
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'c' || e.key === 'C') {
+          e.preventDefault()
+          copyHex()
+          return
+        }
+
+        if (e.key === 'v' || e.key === 'V') {
+          e.preventDefault()
+          // Используем позицию курсора мыши (последнюю известную позицию hex под курсором)
+          const targetHex = lastMouseHexRef.current
+          if (targetHex) {
+            await pasteHex(targetHex.q, targetHex.r)
+          } else {
+            showNotification('error', 'Наведите курсор на ячейку для вставки')
+          }
+          return
+        }
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
@@ -1302,12 +1461,12 @@ export default function MapEditor() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  const getHexAtMousePosition = (event: React.MouseEvent<HTMLCanvasElement>): { q: number; r: number } | null => {
+  const getHexAtScreenPosition = (clientX: number, clientY: number): { q: number; r: number } | null => {
     if (!cameraRef.current || !mapRef.current || !canvasRef.current) return null
     const rect = canvasRef.current.getBoundingClientRect()
     const mouse = new THREE.Vector2(
-      ((event.clientX - rect.left) / rect.width) * 2 - 1,
-      -((event.clientY - rect.top) / rect.height) * 2 + 1
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -((clientY - rect.top) / rect.height) * 2 + 1
     )
     const raycaster = new THREE.Raycaster()
     raycaster.setFromCamera(mouse, cameraRef.current)
@@ -1343,6 +1502,10 @@ export default function MapEditor() {
     }
 
     return null
+  }
+
+  const getHexAtMousePosition = (event: React.MouseEvent<HTMLCanvasElement>): { q: number; r: number } | null => {
+    return getHexAtScreenPosition(event.clientX, event.clientY)
   }
 
   const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1399,6 +1562,10 @@ export default function MapEditor() {
     }
     // Tile dragging is handled in handleCanvasClick (onMouseUp)
     lastMouseRef.current = { x: event.clientX, y: event.clientY }
+
+    // Обновляем последнюю позицию hex под курсором для вставки
+    const coords = getHexAtMousePosition(event)
+    lastMouseHexRef.current = coords
   }
 
   const handleWheel = (event: React.WheelEvent<HTMLCanvasElement>) => {
