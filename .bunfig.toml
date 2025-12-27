@@ -1,0 +1,25 @@
+# Bun configuration file
+# https://bun.sh/docs/cli/bunfig
+
+[install]
+# Automatically install peer dependencies
+auto = true
+
+# Use exact versions in lockfile
+exact = false
+
+# Install optional dependencies
+optional = true
+
+# Install dev dependencies
+dev = true
+
+# Install production dependencies only
+production = false
+
+# Cache settings
+cache = true
+
+# Log level: "debug" | "info" | "warn" | "error"
+log-level = "info"
+
