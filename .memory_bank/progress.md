@@ -6,7 +6,7 @@
 
 ## Контроль Изменений (Change Control)
 
-**Last Checked Commit**: `335501d4b7ad024e0ef6c880e35913175e5a4d30`
+**Last Checked Commit**: `2ea179cb4b94965f08d59d53993fc595b7be8e59`
 
 **Last Checked Date**: `2025-12-27`
 
