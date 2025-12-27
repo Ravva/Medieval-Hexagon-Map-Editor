@@ -28,6 +28,7 @@ bun.lockb
 
 # local env files
 .env*.local
+.env.local
 
 # vercel
 .vercel
