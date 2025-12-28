@@ -444,8 +444,10 @@ export default function MapEditor() {
   const isRotatingRef = useRef(false) // Right click rotate
   const isPanningRef = useRef(false)   // Middle click pan
   const dragStartHexRef = useRef<{ q: number; r: number } | null>(null)
+  const isCopyModeRef = useRef(false) // CTRL key pressed during drag (copy instead of move)
   const lastMouseRef = useRef({ x: 0, y: 0 })
   const lastMouseHexRef = useRef<{ q: number; r: number } | null>(null)
+  const mouseDownPosRef = useRef<{ x: number; y: number; coords: { q: number; r: number } | null } | null>(null) // Track mouse down position to detect drag
   const cameraDistanceRef = useRef(150)
   const cameraAngleXRef = useRef(Math.PI / 4)
   const cameraAngleYRef = useRef(Math.PI / 4)
@@ -629,7 +631,8 @@ export default function MapEditor() {
           })
 
           // Update individual grid height
-          const grid = sceneRef.current?.getObjectByName('__hexGrid')?.getObjectByName(`grid_${hex.q}_${hex.r}`)
+          const gridGroup = sceneRef.current?.getObjectByName(`__hexGrid_level_${hex.height || 0}`)
+          const grid = gridGroup?.getObjectByName(`grid_${hex.q}_${hex.r}_level_${hex.height || 0}`)
           if (grid) {
             const LEVEL_HEIGHT = tileHeightRef.current
             grid.position.y = (hex.height || 0) * LEVEL_HEIGHT + 0.001
@@ -1158,12 +1161,29 @@ export default function MapEditor() {
   }
 
   const copyHex = (): boolean => {
-    if (selectedHexes.length === 0 || !mapRef.current) return false
+    if (!mapRef.current) return false
 
-    // Копируем все выделенные тайлы
+    // Определяем, какие тайлы копировать: выделенные или тайл под курсором
+    let hexesToCopy: Array<{ q: number; r: number }> = []
+
+    if (selectedHexes.length > 0) {
+      // Используем выделенные тайлы
+      hexesToCopy = selectedHexes
+    } else {
+      // Если нет выделенных, используем тайл под курсором
+      const hexUnderCursor = lastMouseHexRef.current
+      if (hexUnderCursor && mapRef.current.hasHex(hexUnderCursor.q, hexUnderCursor.r)) {
+        hexesToCopy = [hexUnderCursor]
+      } else {
+        showNotification('error', 'Нет тайла для копирования. Наведите курсор на тайл или выделите его.')
+        return false
+      }
+    }
+
+    // Копируем тайлы
     const hexes: ClipboardData['hexes'] = []
 
-    for (const selected of selectedHexes) {
+    for (const selected of hexesToCopy) {
       const hex = mapRef.current.getHex(selected.q, selected.r)
       if (hex) {
         hexes.push({
@@ -1337,7 +1357,8 @@ export default function MapEditor() {
 
     // Update grid visibility - show grid for this level if no hex at this level
     if (!mapRef.current.hasHex(q, r, targetHex.height)) {
-      const grid = sceneRef.current.getObjectByName(`__hexGrid_level_${targetHex.height}`)?.getObjectByName(`grid_${q}_${r}_level_${targetHex.height}`)
+      const gridGroup = sceneRef.current.getObjectByName(`__hexGrid_level_${targetHex.height}`)
+      const grid = gridGroup?.getObjectByName(`grid_${q}_${r}_level_${targetHex.height}`)
       if (grid) {
         grid.visible = true
       }
@@ -1348,6 +1369,62 @@ export default function MapEditor() {
       sceneRef.current.remove(building)
       buildingObjectsRef.current.delete(hexKey)
     }
+  }
+
+  const copyHexAtPosition = async (fromQ: number, fromR: number, toQ: number, toR: number) => {
+    if (!mapRef.current || !sceneRef.current) return false
+
+    // Сохраняем состояние перед копированием для undo
+    saveHistoryState()
+
+    // Get topmost hex at source position
+    const sourceHexStack = mapRef.current.getHexStack(fromQ, fromR)
+    if (sourceHexStack.length === 0) return false
+
+    const hexToCopy = sourceHexStack[sourceHexStack.length - 1]
+    const hexHeight = hexToCopy.height
+
+    // Check if target position is valid
+    if (!mapRef.current.isValidCoordinate(toQ, toR)) return false
+
+    // Check if target position is free at the same height, or find next free level
+    let targetHeight = hexHeight
+    if (mapRef.current.hasHex(toQ, toR, targetHeight)) {
+      // Ищем следующий свободный уровень выше текущего
+      let nextLevel = targetHeight
+      while (nextLevel <= 4 && mapRef.current.hasHex(toQ, toR, nextLevel)) {
+        nextLevel++
+      }
+      if (nextLevel > 4) {
+        showNotification('error', 'Нет свободных уровней для копирования')
+        return false
+      }
+      targetHeight = nextLevel
+    }
+
+    // Clone hex and update coordinates
+    const newHex = new Hex(toQ, toR, hexToCopy.terrain)
+    newHex.height = targetHeight
+    newHex.rotation = hexToCopy.rotation
+    newHex.modelData = hexToCopy.modelData
+    newHex.hasRiver = hexToCopy.hasRiver
+
+    // Add hex to target (don't remove from source - it's a copy)
+    mapRef.current.setHex(toQ, toR, newHex)
+    await updateHexMesh(toQ, toR, targetHeight)
+
+    // Сохраняем состояние после копирования для истории
+    saveHistoryState()
+
+    // Wait for mesh to be updated in hexMeshesRef before updating selection
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setSelectedHexes([{ q: toQ, r: toR }])
+      })
+    })
+
+    showNotification('success', 'Тайл скопирован')
+    return true
   }
 
   const moveHex = async (fromQ: number, fromR: number, toQ: number, toR: number) => {
@@ -1533,6 +1610,19 @@ export default function MapEditor() {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current)
     }
   }, [])
+
+  // Update grid visibility when currentHeightLevel changes
+  useEffect(() => {
+    if (!sceneRef.current) return
+
+    // Update visibility for all grid levels
+    for (let level = 0; level <= 4; level++) {
+      const gridGroup = sceneRef.current.getObjectByName(`__hexGrid_level_${level}`)
+      if (gridGroup) {
+        gridGroup.visible = (level === currentHeightLevel)
+      }
+    }
+  }, [currentHeightLevel])
 
   // Keyboard controls
   useEffect(() => {
@@ -1912,7 +2002,7 @@ export default function MapEditor() {
     return getHexAtScreenPosition(event.clientX, event.clientY)
   }
 
-  const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleCanvasClick = async (event: React.MouseEvent<HTMLCanvasElement>) => {
     if (!mapRef.current) return
 
     // Handle tile drag & drop
@@ -1921,17 +2011,23 @@ export default function MapEditor() {
       if (targetCoords) {
         const hexStack = mapRef.current.getHexStack(dragStartHexRef.current.q, dragStartHexRef.current.r)
         if (hexStack.length > 0) {
-          const hexHeight = hexStack[hexStack.length - 1].height
-          // Check if target is different and free at the same height
-          if (
-            (targetCoords.q !== dragStartHexRef.current.q || targetCoords.r !== dragStartHexRef.current.r) &&
-            !mapRef.current.hasHex(targetCoords.q, targetCoords.r, hexHeight)
-          ) {
-            moveHex(dragStartHexRef.current.q, dragStartHexRef.current.r, targetCoords.q, targetCoords.r)
+          // Check if target is different
+          if (targetCoords.q !== dragStartHexRef.current.q || targetCoords.r !== dragStartHexRef.current.r) {
+            if (isCopyModeRef.current) {
+              // CTRL was pressed: copy tile instead of moving
+              await copyHexAtPosition(dragStartHexRef.current.q, dragStartHexRef.current.r, targetCoords.q, targetCoords.r)
+            } else {
+              // Normal drag: move tile
+              const hexHeight = hexStack[hexStack.length - 1].height
+              if (!mapRef.current.hasHex(targetCoords.q, targetCoords.r, hexHeight)) {
+                await moveHex(dragStartHexRef.current.q, dragStartHexRef.current.r, targetCoords.q, targetCoords.r)
+              }
+            }
           }
         }
       }
       isDraggingTileRef.current = false
+      isCopyModeRef.current = false
       dragStartHexRef.current = null
       return
     }
@@ -1986,6 +2082,29 @@ export default function MapEditor() {
       cameraTargetRef.current.add(right.multiplyScalar(dx * panFactor))
       cameraTargetRef.current.add(forward.multiplyScalar(dy * panFactor))
     }
+
+    // Check if we should start dragging (mouse moved enough from initial click)
+    if (mouseDownPosRef.current && !isDraggingTileRef.current && mapRef.current) {
+      const moveDistance = Math.sqrt(
+        Math.pow(event.clientX - mouseDownPosRef.current.x, 2) +
+        Math.pow(event.clientY - mouseDownPosRef.current.y, 2)
+      )
+      // Start dragging if mouse moved more than 5 pixels
+      if (moveDistance > 5) {
+        const coords = mouseDownPosRef.current.coords
+        if (coords && mapRef.current.hasHex(coords.q, coords.r)) {
+          isDraggingTileRef.current = true
+          dragStartHexRef.current = { q: coords.q, r: coords.r }
+          isCopyModeRef.current = false
+        }
+      }
+    }
+
+    // Update CTRL state during drag (for copy mode)
+    if (isDraggingTileRef.current) {
+      isCopyModeRef.current = event.ctrlKey || event.metaKey
+    }
+
     // Tile dragging is handled in handleCanvasClick (onMouseUp)
     lastMouseRef.current = { x: event.clientX, y: event.clientY }
 
@@ -2484,14 +2603,17 @@ export default function MapEditor() {
             onMouseMove={handleMouseMove}
             onMouseDown={(e) => {
               if (e.button === 0) {
-                // Left click: start tile drag if clicking on selected hex
-                if (selectedHexes.length > 0) {
-                  const coords = getHexAtMousePosition(e)
-                  const selectedHex = selectedHexes[0] // Drag only first selected
-                  if (coords && coords.q === selectedHex.q && coords.r === selectedHex.r) {
-                    isDraggingTileRef.current = true
-                    dragStartHexRef.current = { q: selectedHex.q, r: selectedHex.r }
+                // Left click: remember position for potential drag
+                // Don't start drag immediately - wait for mouse movement
+                const coords = getHexAtMousePosition(e)
+                if (coords && mapRef.current && mapRef.current.hasHex(coords.q, coords.r)) {
+                  mouseDownPosRef.current = {
+                    x: e.clientX,
+                    y: e.clientY,
+                    coords: coords
                   }
+                } else {
+                  mouseDownPosRef.current = null
                 }
               } else if (e.button === 2) {
                 // Right click: rotate camera
@@ -2504,16 +2626,22 @@ export default function MapEditor() {
             onMouseUp={(e) => {
               if (e.button === 0) {
                 // Handle tile drag end in handleCanvasClick
+                // Clear mouse down position
+                mouseDownPosRef.current = null
               } else {
                 isDraggingTileRef.current = false
+                isCopyModeRef.current = false
                 dragStartHexRef.current = null
+                mouseDownPosRef.current = null
               }
               isRotatingRef.current = false
               isPanningRef.current = false
             }}
             onMouseLeave={() => {
               isDraggingTileRef.current = false
+              isCopyModeRef.current = false
               dragStartHexRef.current = null
+              mouseDownPosRef.current = null
               isRotatingRef.current = false
               isPanningRef.current = false
             }}
