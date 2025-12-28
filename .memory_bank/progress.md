@@ -8,9 +8,9 @@
 
 ## Контроль Изменений (Change Control)
 
-**Last Checked Commit**: `28c8f99`
+**Last Checked Commit**: `e039d8c`
 
-**Last Checked Date**: `2025-12-27`
+**Last Checked Date**: `2025-12-28`
 
 **Status**: ✅ Синхронизировано
 
@@ -151,3 +151,11 @@
 - Множественное выделение
 - Undo/Redo система
 - Визуализация множественного выделения
+
+### Фаза 7: LLM Генерация Карт ✅
+- Интеграция с Gemini 2.0 Flash API
+- Создание tile registry с анализом соединений
+- TileConnectionAnalyzer для анализа геометрии OBJ
+- Определение типов соединений (grass, water, coast, road)
+- UI `/generate-registry` с 3D визуализацией соединений
+- API endpoints: `/api/llm/generate-registry`, `/api/llm/save-registry`
