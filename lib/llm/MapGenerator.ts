@@ -97,13 +97,30 @@ export class MapGenerator {
     const { width, height, prompt, biome } = params
 
     // Compact tile registry (only include essential fields to reduce token count)
-    const compactTiles = tileRegistry.tiles.map((tile) => ({
-      tile_id: tile.tile_id,
-      biome: tile.biome,
-      category: tile.category,
-      walkable: tile.walkable,
-      tags: tile.tags,
-    }))
+    // Include connection information for rivers, roads, and coast tiles
+    const compactTiles = tileRegistry.tiles.map((tile) => {
+      const compact: {
+        tile_id: string
+        biome: string
+        category: string
+        walkable: boolean
+        tags: string[]
+        connections?: TileDescriptor['connections']
+      } = {
+        tile_id: tile.tile_id,
+        biome: tile.biome,
+        category: tile.category,
+        walkable: tile.walkable,
+        tags: tile.tags,
+      }
+
+      // Include connections information for tiles that need connections
+      if (tile.connections && Object.values(tile.connections).some(Boolean)) {
+        compact.connections = tile.connections
+      }
+
+      return compact
+    })
 
     const userPrompt = prompt || `Generate a ${biome || 'plains'} map`
     const primaryBiome = biome || 'plains'
@@ -132,13 +149,21 @@ HEIGHT SYSTEM - CRITICAL RULES:
 - Buildings: Height 0-1, always with base tile at height 0
 - Adjacent hexes should not differ by more than 1 height level (realistic slopes)
 
-RIVER CONNECTIVITY - CRITICAL:
-- Rivers MUST form continuous, connected paths
-- River tiles must be placed so they connect to adjacent river tiles
-- Each river tile has 6 sides (hexagonal). Use rotation (0, 60, 120, 180, 240, 300) to align the river's flow direction
-- If a river tile connects to a neighbor at direction X, the neighbor must connect back at direction (X + 180) % 360
-- River tiles should form a continuous network without gaps or disconnected segments
-- Always use height 0 for all river tiles
+RIVER/ROAD CONNECTIVITY - CRITICAL:
+- Rivers and roads MUST form continuous, connected paths
+- Each tile has connection information in the "exits" field (if present)
+- The "exits" field indicates which of the 6 hex sides have connections:
+  * east, northeast, northwest, west, southwest, southeast
+- When placing a tile, check its "exits" field to see which sides connect
+- Rotate tiles (0, 60, 120, 180, 240, 300 degrees) to align connections properly
+- CRITICAL RULE: If tile A connects to neighbor B at direction X, then:
+  * Tile A must have exit at direction X
+  * Tile B must have exit at the OPPOSITE direction (X + 180 degrees)
+  * Example: If A connects EAST to B, then A has "east: true" and B has "west: true"
+- For tiles with "exits" information, you MUST ensure adjacent tiles connect properly
+- River tiles should form continuous networks without gaps or disconnected segments
+- Road tiles should form connected road networks
+- Always use height 0 for all river/road tiles
 
 TILE PLACEMENT RULES:
 1. Match biome to tile_id (use tiles with matching biome property from the registry)
@@ -326,7 +351,6 @@ Generate a realistic and playable map based on the user's request. The primary b
     }
 
     // Add missing base tiles for elevated hexes
-    const tileRegistry = this.loadTileRegistry()
     const defaultPlainsTile = tileRegistry.tiles.find(
       (t) => t.tile_id === 'tiles_base_hex_grass' || (t.biome === 'plains' && (t.category === 'tiles' || t.category === 'base'))
     ) || tileRegistry.tiles.find((t) => t.biome === 'plains')
@@ -349,7 +373,103 @@ Generate a realistic and playable map based on the user's request. The primary b
       }
     }
 
+    // Validate connectivity for rivers and roads
+    this.validateConnectivity(generatedHexes, tileRegistry)
+
     return generatedHexes
+  }
+
+  /**
+   * Validate connectivity of rivers and roads after generation
+   * Checks that adjacent tiles with connections actually connect properly
+   */
+  private validateConnectivity(
+    generatedHexes: GeneratedHex[],
+    tileRegistry: TileRegistry
+  ): void {
+    const hexMap = new Map<string, GeneratedHex>()
+    for (const hex of generatedHexes) {
+      const key = `${hex.q},${hex.r}`
+      // Store the topmost hex at each position (highest height)
+      const existing = hexMap.get(key)
+      if (!existing || hex.height > existing.height) {
+        hexMap.set(key, hex)
+      }
+    }
+
+    const issues: string[] = []
+
+    for (const hex of generatedHexes) {
+      const tileDescriptor = tileRegistry.tiles.find((t) => t.tile_id === hex.tile_id)
+      if (!tileDescriptor || !tileDescriptor.connections) {
+        continue // Not a tile that needs connectivity validation
+      }
+
+      // Check each connection direction
+      const connections = tileDescriptor.connections
+      const neighbors = getAxialNeighbors(hex.q, hex.r)
+
+      // Map hex directions to neighbor indices
+      const directionMap: Record<string, { q: number; r: number }> = {
+        east: neighbors[0], // { q: 1, r: 0 }
+        northeast: neighbors[1], // { q: 1, r: -1 }
+        northwest: neighbors[2], // { q: 0, r: -1 }
+        west: neighbors[3], // { q: -1, r: 0 }
+        southwest: neighbors[4], // { q: -1, r: 1 }
+        southeast: neighbors[5], // { q: 0, r: 1 }
+      }
+
+      const oppositeDirections: Record<string, string> = {
+        east: 'west',
+        west: 'east',
+        northeast: 'southwest',
+        southwest: 'northeast',
+        northwest: 'southeast',
+        southeast: 'northwest',
+      }
+
+      for (const [direction, hasConnection] of Object.entries(connections)) {
+        if (!hasConnection) continue
+
+        const neighbor = directionMap[direction]
+        if (!neighbor) continue
+
+        const neighborKey = `${neighbor.q},${neighbor.r}`
+        const neighborHex = hexMap.get(neighborKey)
+
+        if (!neighborHex) {
+          // Neighbor doesn't exist (edge of map) - this is OK
+          continue
+        }
+
+        const neighborTile = tileRegistry.tiles.find((t) => t.tile_id === neighborHex.tile_id)
+        if (!neighborTile || !neighborTile.connections) {
+          // Neighbor is not a connectable tile - this might be an issue
+          issues.push(
+            `Tile ${hex.tile_id} at (${hex.q}, ${hex.r}) has connection ${direction} but neighbor at (${neighbor.q}, ${neighbor.r}) is not a connectable tile`
+          )
+          continue
+        }
+
+        // Check if neighbor has opposite connection
+        const oppositeDir = oppositeDirections[direction]
+        if (!neighborTile.connections[oppositeDir as keyof typeof neighborTile.connections]) {
+          issues.push(
+            `Tile ${hex.tile_id} at (${hex.q}, ${hex.r}) connects ${direction} to ${neighborHex.tile_id} at (${neighbor.q}, ${neighbor.r}), but neighbor doesn't have ${oppositeDir} connection`
+          )
+        }
+      }
+    }
+
+    if (issues.length > 0) {
+      console.warn(`Connectivity validation found ${issues.length} issues:`)
+      issues.slice(0, 10).forEach((issue) => console.warn(`  - ${issue}`))
+      if (issues.length > 10) {
+        console.warn(`  ... and ${issues.length - 10} more issues`)
+      }
+    } else {
+      console.log('Connectivity validation passed: all rivers/roads are properly connected')
+    }
   }
 
   /**

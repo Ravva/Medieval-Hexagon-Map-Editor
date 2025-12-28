@@ -7,8 +7,14 @@
  * - Semantic information from file paths/names (biome, category, etc.)
  */
 
-import fs from 'fs'
-import path from 'path'
+import * as fs from 'fs'
+import * as path from 'path'
+import {
+  analyzeTileConnections,
+  getConnectionsFromFilename,
+  combineConnections,
+  type TileConnections,
+} from './TileConnectionAnalyzer'
 
 export interface OBJMetadata {
   vertexCount: number
@@ -59,15 +65,9 @@ export interface TileDescriptor {
   visual_style: string
   color_palette?: string[]
 
-  // Связность (для дорог, рек, побережья)
-  exits?: {
-    north?: boolean
-    northeast?: boolean
-    southeast?: boolean
-    south?: boolean
-    southwest?: boolean
-    northwest?: boolean
-  }
+  // Соединения (для дорог, рек, побережья, базовых тайлов)
+  // Определяет тип соединения на каждой из 6 сторон для стыковки с соседними тайлами
+  connections?: TileConnections
 
   // Метаданные для генерации
   rarity?: number
@@ -358,6 +358,46 @@ export class AssetAnalyzer {
       }
     }
 
+    // Analyze tile connections for rivers, roads, coast, and base tiles
+    // Uses ONLY automatic methods: filename heuristics + geometry analysis
+    let connections: TileConnections | undefined
+    const needsConnections = semantics.category === 'tiles' &&
+      (semantics.subcategory === 'rivers' ||
+       semantics.subcategory === 'roads' ||
+       semantics.subcategory === 'coast' ||
+       semantics.subcategory === 'base')
+
+    if (needsConnections) {
+      try {
+        // Determine tile type from subcategory and biome
+        let tileType: 'river' | 'road' | 'coast' | 'base' | 'other' = 'other'
+
+        if (semantics.subcategory === 'rivers') {
+          tileType = 'river'
+        } else if (semantics.subcategory === 'roads') {
+          tileType = 'road'
+        } else if (semantics.subcategory === 'coast') {
+          tileType = 'coast'
+        } else if (semantics.subcategory === 'base') {
+          tileType = 'base'
+        }
+
+        // Priority: Filename heuristics (fast, reliable for known patterns) > Geometry analysis
+        const filenameConnections = getConnectionsFromFilename(fileName, tileType, semantics.biome)
+        const geometryConnections = analyzeTileConnections(objPath, mtlPath, tileType, semantics.biome)
+
+        // Combine sources (filename takes precedence if available)
+        const combined = combineConnections(geometryConnections, filenameConnections)
+
+        // Only set connections if we found at least one connection
+        if (Object.values(combined).some((v) => v !== undefined && v !== null)) {
+          connections = combined
+        }
+      } catch (error) {
+        console.warn(`Failed to analyze connections for ${objPath}:`, error)
+      }
+    }
+
     return {
       tile_id,
       name,
@@ -373,6 +413,7 @@ export class AssetAnalyzer {
       tags: semantics.tags,
       walkable: semantics.walkable,
       visual_style: semantics.visualStyle,
+      connections,
     }
   }
 

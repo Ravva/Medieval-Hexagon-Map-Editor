@@ -11,8 +11,8 @@
  */
 
 import { AssetAnalyzer, type TileDescriptor } from '../lib/llm/AssetAnalyzer'
-import fs from 'fs'
-import path from 'path'
+import * as fs from 'fs'
+import * as path from 'path'
 
 const OUTPUT_PATH = path.join(process.cwd(), 'lib', 'llm', 'tile-registry.json')
 
@@ -85,6 +85,22 @@ function main() {
   console.log(`   - By biome:`)
   for (const [biome, count] of Object.entries(biomeCounts)) {
     console.log(`     ${biome}: ${count}`)
+  }
+
+  // Count tiles with connection information
+  const tilesWithConnections = tiles.filter((t) => t.connections && Object.values(t.connections).some(Boolean))
+  console.log(`   - Tiles with connections: ${tilesWithConnections.length}`)
+
+  if (tilesWithConnections.length > 0) {
+    console.log(`   - Connection breakdown:`)
+    const connectionCategories: Record<string, number> = {}
+    for (const tile of tilesWithConnections) {
+      const key = `${tile.category}_${tile.subcategory || 'none'}`
+      connectionCategories[key] = (connectionCategories[key] || 0) + 1
+    }
+    for (const [category, count] of Object.entries(connectionCategories)) {
+      console.log(`     ${category}: ${count}`)
+    }
   }
 }
 
