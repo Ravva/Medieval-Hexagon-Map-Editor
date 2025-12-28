@@ -465,6 +465,13 @@ export default function MapEditor() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
+  // Локальные модели для генерации
+  const [useLocalModel, setUseLocalModel] = useState(false)
+  const [localModelUrl, setLocalModelUrl] = useState('http://localhost:1234')
+  const [localModels, setLocalModels] = useState<Array<{ id: string; object: string; owned_by: string }>>([])
+  const [selectedLocalModel, setSelectedLocalModel] = useState<string>('')
+  const [loadingLocalModels, setLoadingLocalModels] = useState(false)
+
   useEffect(() => {
     const fetchAssets = async () => {
       try {
@@ -757,6 +764,39 @@ export default function MapEditor() {
     setGenerateDialogOpen(true)
   }
 
+  // Загрузка локальных моделей
+  const loadLocalModels = async () => {
+    setLoadingLocalModels(true)
+    try {
+      const url = `${localModelUrl}/v1/models`
+      const response = await fetch(url)
+      const text = await response.text()
+      let data: any
+
+      try {
+        data = JSON.parse(text)
+      } catch {
+        data = { raw: text }
+      }
+
+      if (!response.ok) {
+        showNotification('error', data.error || data.message || `Failed to load models: HTTP ${response.status}`)
+        return
+      }
+
+      const models = data.data || data.models || []
+      setLocalModels(models)
+
+      if (models.length > 0 && !selectedLocalModel) {
+        setSelectedLocalModel(models[0].id)
+      }
+    } catch (err) {
+      showNotification('error', err instanceof Error ? err.message : String(err))
+    } finally {
+      setLoadingLocalModels(false)
+    }
+  }
+
   const confirmGenerateMap = async () => {
     try {
       if (!generatePrompt.trim()) {
@@ -772,24 +812,51 @@ export default function MapEditor() {
       const mapDimensions = MAP_SIZES[generateMapSize]
 
       // Call API to generate map (returns serialized map format)
+      const requestBody: any = {
+        width: mapDimensions.width,
+        height: mapDimensions.height,
+        prompt: generatePrompt.trim(),
+        biome: generateBiome,
+        returnFormat: 'serialized',
+      }
+
+      // Добавляем параметры локальной модели, если используется
+      if (useLocalModel) {
+        requestBody.useLocalModel = true
+        requestBody.localUrl = localModelUrl
+        requestBody.model = selectedLocalModel || localModels[0]?.id
+      }
+
+      // Увеличиваем timeout для локальных моделей (могут генерировать долго)
+      const timeout = useLocalModel ? 600000 : 30000 // 10 минут для локальных, 30 сек для Gemini
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), timeout)
+
       const response = await fetch('/api/llm/generate-map', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          width: mapDimensions.width,
-          height: mapDimensions.height,
-          prompt: generatePrompt.trim(),
-          biome: generateBiome,
-          returnFormat: 'serialized',
-        }),
-      })
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timeoutId))
 
       if (!response.ok) {
-        const errorData = await response.json()
+        let errorData: any
+        try {
+          errorData = await response.json()
+        } catch {
+          const errorText = await response.text()
+          throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`)
+        }
         throw new Error(errorData.error || 'Map generation error')
       }
 
-      const data = await response.json()
+      let data: any
+      try {
+        data = await response.json()
+      } catch (e) {
+        const text = await response.text()
+        throw new Error(`Failed to parse response: ${e instanceof Error ? e.message : String(e)}\nResponse: ${text.substring(0, 500)}`)
+      }
       if (!data.success || !data.mapData) {
         throw new Error('Invalid API response format')
       }
@@ -847,7 +914,19 @@ export default function MapEditor() {
       console.error('Failed to generate map:', error)
       setIsLoading(false)
       setIsGenerating(false)
-      showNotification('error', `Generation error: ${error instanceof Error ? error.message : String(error)}`)
+
+      let errorMessage = error instanceof Error ? error.message : String(error)
+
+      // Специальная обработка для timeout
+      if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('fetch failed'))) {
+        if (useLocalModel) {
+          errorMessage = 'Генерация прервана из-за таймаута. Локальные модели могут генерировать долго (5-10 минут). Попробуйте уменьшить размер карты или подождите дольше.'
+        } else {
+          errorMessage = 'Генерация прервана из-за таймаута. Попробуйте еще раз.'
+        }
+      }
+
+      showNotification('error', `Generation error: ${errorMessage}`)
     }
   }
 
@@ -2266,6 +2345,67 @@ export default function MapEditor() {
               </DialogDescription>
             </DialogHeader>
             <div className="py-4 space-y-4">
+              {/* Переключатель между Gemini и локальными моделями */}
+              <div className="space-y-2">
+                <Label>LLM Provider</Label>
+                <Tabs value={useLocalModel ? 'local' : 'gemini'} onValueChange={(v) => setUseLocalModel(v === 'local')}>
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="gemini">Gemini API</TabsTrigger>
+                    <TabsTrigger value="local">Локальный сервер</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+
+              {/* Настройки локального сервера */}
+              {useLocalModel && (
+                <div className="space-y-3 p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                  <div className="space-y-2">
+                    <Label htmlFor="local-model-url">URL локального сервера</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="local-model-url"
+                        value={localModelUrl}
+                        onChange={(e) => setLocalModelUrl(e.target.value)}
+                        placeholder="http://localhost:1234"
+                        className="flex-1"
+                      />
+                      <Button
+                        onClick={loadLocalModels}
+                        disabled={loadingLocalModels || isGenerating}
+                        variant="outline"
+                        size="sm"
+                      >
+                        {loadingLocalModels ? '...' : 'Загрузить'}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {localModels.length > 0 && (
+                    <div className="space-y-2">
+                      <Label htmlFor="local-model-select">Модель</Label>
+                      <Select value={selectedLocalModel} onValueChange={setSelectedLocalModel}>
+                        <SelectTrigger id="local-model-select">
+                          <SelectValue placeholder="Выберите модель" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {localModels.map((model) => (
+                            <SelectItem key={model.id} value={model.id}>
+                              {model.id}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {localModels.length === 0 && !loadingLocalModels && (
+                    <p className="text-xs text-purple-400">
+                      Нажмите "Загрузить" для получения списка моделей
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="generate-prompt">Description</Label>
                 <Textarea
@@ -2307,14 +2447,25 @@ export default function MapEditor() {
               </div>
               <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
                 <p className="font-semibold mb-1">Note:</p>
-                <p>Generation may take 5-10 seconds. The current map will be replaced.</p>
+                {useLocalModel ? (
+                  <p>Локальные модели могут генерировать карту 5-10 минут в зависимости от размера. Текущая карта будет заменена.</p>
+                ) : (
+                  <p>Generation may take 5-10 seconds. The current map will be replaced.</p>
+                )}
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setGenerateDialogOpen(false)} disabled={isGenerating}>
                 Cancel
               </Button>
-              <Button onClick={confirmGenerateMap} disabled={isGenerating || !generatePrompt.trim()}>
+              <Button
+                onClick={confirmGenerateMap}
+                disabled={
+                  isGenerating ||
+                  !generatePrompt.trim() ||
+                  (useLocalModel && (!selectedLocalModel && localModels.length > 0))
+                }
+              >
                 {isGenerating ? 'Generating...' : 'Generate'}
               </Button>
             </DialogFooter>
