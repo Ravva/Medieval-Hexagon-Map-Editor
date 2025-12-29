@@ -7,12 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { Check, X, ArrowRight, CircleNotch, Download, ArrowClockwise } from '@phosphor-icons/react'
+import { Check, X, ArrowRight, CircleNotch, Download, ArrowClockwise, Eye } from '@phosphor-icons/react'
 import { modelLoader } from '@/lib/three/ModelLoader'
 import { axialToWorld } from '@/lib/game/HexCoordinateConverter'
 import { cn } from '@/lib/utils'
 import type { TileDescriptor } from '@/lib/llm/AssetAnalyzer'
 import type { TileConnections } from '@/lib/llm/TileConnectionAnalyzer'
+import { renderTileFromMultipleAngles, extractBase64FromDataUrl } from '@/lib/llm/TileVisionRenderer'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 interface RegistryData {
   version: string
@@ -40,6 +46,14 @@ export default function GenerateRegistryPage() {
   // Редактируемые типы соединений для текущего тайла
   const [editedConnections, setEditedConnections] = useState<TileConnections | null>(null)
 
+  // Vision analysis settings
+  const [visionDialogOpen, setVisionDialogOpen] = useState(false)
+  const [visionUrl, setVisionUrl] = useState('http://localhost:1234')
+  const [visionModels, setVisionModels] = useState<Array<{ id: string; object: string; owned_by: string }>>([])
+  const [selectedVisionModel, setSelectedVisionModel] = useState<string>('')
+  const [loadingVisionModels, setLoadingVisionModels] = useState(false)
+  const [analyzingVision, setAnalyzingVision] = useState(false)
+
   // Initialize Three.js scene
   useEffect(() => {
     if (!canvasRef.current) return
@@ -49,26 +63,21 @@ export default function GenerateRegistryPage() {
     sceneRef.current = scene
 
     const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000)
-    // Максимальное приближение по умолчанию
+    // Начальная позиция камеры (будет автоматически подстроена при загрузке модели)
     camera.position.set(0, 8, 8)
     camera.lookAt(0, 0, 0)
     cameraRef.current = camera
 
     const renderer = new THREE.WebGLRenderer({ canvas: canvasRef.current, antialias: true })
 
-    // Функция для обновления размера renderer
+    // Функция для обновления размера renderer (фиксированный размер 1000x1000)
     const updateSize = () => {
-      if (canvasRef.current) {
-        const container = canvasRef.current.parentElement
-        if (container) {
-          const width = container.clientWidth
-          const height = container.clientHeight
-          renderer.setSize(width, height)
-          if (cameraRef.current) {
-            cameraRef.current.aspect = width / height
-            cameraRef.current.updateProjectionMatrix()
-          }
-        }
+      const width = 1000
+      const height = 1000
+      renderer.setSize(width, height)
+      if (cameraRef.current) {
+        cameraRef.current.aspect = width / height
+        cameraRef.current.updateProjectionMatrix()
       }
     }
 
@@ -92,29 +101,8 @@ export default function GenerateRegistryPage() {
     directionalLight.castShadow = true
     scene.add(directionalLight)
 
-    // Add mouse wheel zoom
-    const handleWheel = (event: WheelEvent) => {
-      if (!cameraRef.current) return
-      event.preventDefault()
-      const zoomSpeed = 0.1
-      const delta = event.deltaY > 0 ? 1 + zoomSpeed : 1 - zoomSpeed
-      cameraRef.current.position.multiplyScalar(delta)
-      // Limit zoom
-      const minDistance = 3
-      const maxDistance = 50
-      const distance = cameraRef.current.position.length()
-      if (distance < minDistance) {
-        cameraRef.current.position.normalize().multiplyScalar(minDistance)
-      } else if (distance > maxDistance) {
-        cameraRef.current.position.normalize().multiplyScalar(maxDistance)
-      }
-      cameraRef.current.lookAt(0, 0, 0)
-    }
-
-    const canvas = canvasRef.current
-    if (canvas) {
-      canvas.addEventListener('wheel', handleWheel, { passive: false })
-    }
+    // Фиксированная камера - без zoom (чтобы ничего не прыгало)
+    // Камера остается в фиксированной позиции для стабильного отображения
 
     // Animation loop
     const animate = () => {
@@ -126,9 +114,6 @@ export default function GenerateRegistryPage() {
     animate()
 
     return () => {
-      if (canvas) {
-        canvas.removeEventListener('wheel', handleWheel)
-      }
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current)
       }
@@ -164,22 +149,50 @@ export default function GenerateRegistryPage() {
   }, [selectedTile, editedConnections])
 
   const renderTile = (tile: TileDescriptor) => {
-    if (!sceneRef.current) return
+    if (!sceneRef.current || !cameraRef.current) return
 
     modelLoader
       .loadModel(`tile_${tile.tile_id}`, tile.obj_path, tile.mtl_path)
       .then((model) => {
-        if (!sceneRef.current) return
+        if (!sceneRef.current || !cameraRef.current) return
 
         const group = new THREE.Group()
         group.userData.isTileModel = true
-        group.add(model.clone())
+        const modelClone = model.clone()
+        group.add(modelClone)
 
-        const hexSize = 3.5
-        const R = 2 / Math.sqrt(3) // Внешний радиус в единицах модели
-        const outerRadius = R * hexSize // Внешний радиус в реальных единицах
-        const connectionRadius = 0.3
-        const compassRadius = outerRadius + 1.5
+        // Вычисляем bounding box модели для центрирования
+        const box = new THREE.Box3().setFromObject(modelClone)
+        const center = box.getCenter(new THREE.Vector3())
+        const size = box.getSize(new THREE.Vector3())
+
+        // Центрируем модель в начале координат
+        modelClone.position.sub(center)
+
+        // Вычисляем максимальный размер для масштабирования
+        const maxDim = Math.max(size.x, size.y, size.z)
+
+        // Масштабируем модель так, чтобы она помещалась в кадр
+        // Используем фиксированный размер кадра (1000x1000) и FOV 45°
+        const fov = cameraRef.current.fov * (Math.PI / 180)
+        const distance = maxDim / (2 * Math.tan(fov / 2)) * 1.5 // 1.5 для запаса
+
+        // Позиционируем камеру для оптимального обзора
+        // Слегка сверху и сбоку для лучшего обзора гексагона
+        const cameraDistance = distance * 1.2
+        cameraRef.current.position.set(0, cameraDistance * 0.7, cameraDistance)
+        cameraRef.current.lookAt(0, 0, 0)
+
+        // Обновляем projection matrix после изменения позиции
+        cameraRef.current.updateProjectionMatrix()
+
+        // Вычисляем радиусы на основе реального размера модели после центрирования
+        // Используем размер модели для определения масштаба
+        const modelRadius = Math.max(size.x, size.z) / 2
+        // Для гексагона: внешний радиус примерно равен modelRadius
+        const outerRadius = modelRadius * 1.0
+        const connectionRadius = Math.max(0.15, modelRadius * 0.06) // Адаптивный размер индикаторов
+        const compassRadius = outerRadius + modelRadius * 0.3
 
         // Все 6 граней гексагона (flat-topped)
         const directions = [
@@ -191,7 +204,7 @@ export default function GenerateRegistryPage() {
           { name: 'southeast', label: 'SE', pos: [outerRadius * 0.5, 0, -outerRadius * 0.866], compassPos: [compassRadius * 0.5, 0, compassRadius * 0.866] },
         ]
 
-        // Добавляем подписи для всех 6 граней
+        // Добавляем подписи для всех 6 граней (выше, чтобы не перекрывать тайл)
         directions.forEach((dir) => {
           const canvas = document.createElement('canvas')
           const context = canvas.getContext('2d')
@@ -206,8 +219,9 @@ export default function GenerateRegistryPage() {
             const texture = new THREE.CanvasTexture(canvas)
             const spriteMaterial = new THREE.SpriteMaterial({ map: texture })
             const sprite = new THREE.Sprite(spriteMaterial)
-            sprite.position.set(dir.compassPos[0], 1.5, dir.compassPos[2])
-            sprite.scale.set(0.5, 0.5, 1)
+            // Поднимаем подписи выше, чтобы не перекрывать тайл
+            sprite.position.set(dir.compassPos[0], 3.0, dir.compassPos[2])
+            sprite.scale.set(0.4, 0.4, 1) // Немного уменьшаем размер
             sprite.userData.isTileModel = true
             group.add(sprite)
           }
@@ -217,7 +231,7 @@ export default function GenerateRegistryPage() {
         // Если editedConnections пустой объект {}, используем его (все будет unknown)
         // Если editedConnections null, используем tile.connections
         const connections = editedConnections !== null ? editedConnections : (tile.connections || {})
-        console.log('Rendering tile:', tile.tile_id, 'connections:', connections, 'editedConnections:', editedConnections, 'tile.connections:', tile.connections)
+        // Убрали console.log для чистоты кода
 
         // Показываем цветные сферы только для граней с соединениями
         directions.forEach((dir) => {
@@ -256,7 +270,8 @@ export default function GenerateRegistryPage() {
             metalness: 0.1
           })
           const indicator = new THREE.Mesh(geometry, material)
-          indicator.position.set(dir.pos[0], 0.5, dir.pos[2])
+          // Поднимаем индикаторы выше, чтобы не перекрывать тайл
+          indicator.position.set(dir.pos[0], 0.8, dir.pos[2])
           indicator.userData.direction = dir.name // Сохраняем направление для клика
           group.add(indicator)
         })
@@ -382,11 +397,7 @@ export default function GenerateRegistryPage() {
         // Если value === undefined или null, не добавляем в convertedConnections (будет показано как 'unknown' в UI)
       })
 
-      console.log('Initializing editedConnections:', {
-        tile_id: selectedTile.tile_id,
-        originalConnections: selectedTile.connections,
-        convertedConnections,
-      })
+      // Инициализация editedConnections без логирования
 
       setEditedConnections(convertedConnections)
     } else {
@@ -438,6 +449,240 @@ export default function GenerateRegistryPage() {
     canvas.addEventListener('click', handleClick)
     return () => canvas.removeEventListener('click', handleClick)
   }, [selectedTile, editedConnections])
+
+  // Загрузка списка vision моделей
+  const loadVisionModels = async () => {
+    setLoadingVisionModels(true)
+    try {
+      const url = `${visionUrl}/v1/models`
+      const response = await fetch(url)
+      const text = await response.text()
+      let data: any
+
+      try {
+        data = JSON.parse(text)
+      } catch {
+        data = { raw: text }
+      }
+
+      if (!response.ok) {
+        alert(`Ошибка загрузки моделей: ${data.error || data.message || `HTTP ${response.status}`}`)
+        return
+      }
+
+      const models = data.data || data.models || []
+      setVisionModels(models)
+
+      // Автоматически выбираем первую модель, если есть
+      if (models.length > 0) {
+        // Если уже выбрана модель и она есть в списке - оставляем её
+        // Иначе выбираем первую
+        const currentModelExists = models.some(m => m.id === selectedVisionModel)
+        if (!currentModelExists || !selectedVisionModel) {
+          const firstModelId = models[0].id
+          setSelectedVisionModel(firstModelId)
+        }
+      } else {
+        setSelectedVisionModel('')
+      }
+    } catch (err) {
+      alert(`Ошибка: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setLoadingVisionModels(false)
+    }
+  }
+
+  // Vision анализ соединений
+  const analyzeConnectionsWithVision = async () => {
+    if (!selectedTile || !sceneRef.current || !cameraRef.current || !rendererRef.current) {
+      alert('Выберите тайл для анализа')
+      return
+    }
+
+    if (!selectedVisionModel && visionModels.length === 0) {
+      alert('Загрузите список моделей и выберите vision модель')
+      return
+    }
+
+    setAnalyzingVision(true)
+    try {
+      // Создаем отдельную сцену только для vision анализа (без меток и подписей)
+      const visionScene = new THREE.Scene()
+      visionScene.background = new THREE.Color(0x1a1a1a)
+
+      // Копируем освещение из основной сцены
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6)
+      visionScene.add(ambientLight)
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
+      directionalLight.position.set(10, 20, 10)
+      visionScene.add(directionalLight)
+
+      // Загружаем модель тайла без меток и индикаторов
+      const model = await modelLoader.loadModel(`vision_${selectedTile.tile_id}`, selectedTile.obj_path, selectedTile.mtl_path)
+      const modelClone = model.clone()
+
+      // Центрируем модель
+      const box = new THREE.Box3().setFromObject(modelClone)
+      const center = box.getCenter(new THREE.Vector3())
+      modelClone.position.sub(center)
+
+      visionScene.add(modelClone)
+
+      // Создаем временную камеру для vision анализа
+      const visionCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000)
+      const size = box.getSize(new THREE.Vector3())
+      const maxDim = Math.max(size.x, size.y, size.z)
+      const fov = visionCamera.fov * (Math.PI / 180)
+      const distance = maxDim / (2 * Math.tan(fov / 2)) * 1.5
+      const cameraDistance = distance * 1.2
+      visionCamera.position.set(0, cameraDistance * 0.7, cameraDistance)
+      visionCamera.lookAt(0, 0, 0)
+      visionCamera.updateProjectionMatrix()
+
+      // Рендерим тайл с 6 разных углов (только модель, без меток)
+      const images = await renderTileFromMultipleAngles(
+        visionScene,
+        visionCamera,
+        rendererRef.current,
+        {
+          width: 512,
+          height: 512,
+          fov: 45,
+          distance: cameraDistance,
+        }
+      )
+
+      // Очищаем временную сцену
+      visionScene.clear()
+
+      // Конвертируем в base64 (убираем data: префикс)
+      const base64Images = images.map((img) => extractBase64FromDataUrl(img))
+
+      // Определяем tileType и biome из selectedTile
+      const tileType = selectedTile.category === 'tiles'
+        ? (selectedTile.subcategory === 'rivers' ? 'river'
+          : selectedTile.subcategory === 'roads' ? 'road'
+          : selectedTile.subcategory === 'coast' ? 'coast'
+          : selectedTile.subcategory === 'base' ? 'base'
+          : 'other')
+        : 'other'
+
+      // Вызываем API для vision анализа
+      const response = await fetch('/api/llm/analyze-connections-vision', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          images: base64Images,
+          localUrl: visionUrl,
+          model: selectedVisionModel || visionModels[0]?.id,
+          tileType,
+          biome: selectedTile.biome,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Vision анализ не удался')
+      }
+
+      // Применяем результаты к editedConnections
+      if (data.connections) {
+        // Получаем текущие соединения для сравнения
+        const currentConnections = editedConnections || selectedTile.connections || {}
+        const newConnections = data.connections
+
+        // Сравниваем и формируем описание изменений
+        const changes: string[] = []
+        const unchanged: string[] = []
+        const added: string[] = []
+        const removed: string[] = []
+
+        const allDirections = ['east', 'southeast', 'southwest', 'west', 'northwest', 'northeast'] as const
+        const typeLabels: Record<string, string> = {
+          grass: '🟢 Трава',
+          water: '🔵 Вода',
+          coast: '🟠 Побережье',
+          road: '🟤 Дорога',
+          unknown: '🔴 Неизвестно',
+        }
+
+        const directionLabels: Record<string, string> = {
+          east: 'Восток (E)',
+          southeast: 'Юго-Восток (SE)',
+          southwest: 'Юго-Запад (SW)',
+          west: 'Запад (W)',
+          northwest: 'Северо-Запад (NW)',
+          northeast: 'Северо-Восток (NE)',
+        }
+
+        allDirections.forEach((dir) => {
+          const current = currentConnections[dir]
+          const vision = newConnections[dir]
+
+          if (!current && vision) {
+            // Добавлено новое соединение
+            added.push(`  ➕ ${directionLabels[dir]}: ${typeLabels[vision] || vision}`)
+          } else if (current && !vision) {
+            // Удалено соединение
+            removed.push(`  ➖ ${directionLabels[dir]}: было ${typeLabels[current] || current}`)
+          } else if (current && vision && current !== vision) {
+            // Изменен тип
+            changes.push(`  🔄 ${directionLabels[dir]}: ${typeLabels[current] || current} → ${typeLabels[vision] || vision}`)
+          } else if (current === vision && current) {
+            // Без изменений
+            unchanged.push(`  ✓ ${directionLabels[dir]}: ${typeLabels[current] || current}`)
+          }
+        })
+
+        // Формируем сравнительное сообщение
+        let message = '✅ Vision анализ завершен!\n\n'
+
+        if (changes.length > 0) {
+          message += `🔄 Изменения:\n${changes.join('\n')}\n\n`
+        }
+
+        if (added.length > 0) {
+          message += `➕ Добавлено:\n${added.join('\n')}\n\n`
+        }
+
+        if (removed.length > 0) {
+          message += `➖ Удалено:\n${removed.join('\n')}\n\n`
+        }
+
+        if (unchanged.length > 0) {
+          message += `✓ Без изменений:\n${unchanged.join('\n')}\n\n`
+        }
+
+        // Статистика
+        const connectionTypes: Record<string, number> = {}
+        Object.values(newConnections).forEach((type) => {
+          if (type) {
+            connectionTypes[type] = (connectionTypes[type] || 0) + 1
+          }
+        })
+
+        const typeList = Object.entries(connectionTypes)
+          .map(([type, count]) => `  • ${typeLabels[type] || type}: ${count}`)
+          .join('\n')
+
+        message += `📊 Итоговая статистика:\n${typeList}`
+
+        setEditedConnections(newConnections)
+        alert(message)
+        // Закрываем диалог после успешного анализа
+        setVisionDialogOpen(false)
+      } else {
+        alert('Vision модель не обнаружила соединений')
+      }
+    } catch (error) {
+      alert(`Ошибка vision анализа: ${error instanceof Error ? error.message : String(error)}`)
+    } finally {
+      setAnalyzingVision(false)
+    }
+  }
 
   // Filter tiles that need connection validation (rivers, roads, coast, base)
   const tilesToValidate = registryData?.tiles.filter(
@@ -531,18 +776,40 @@ export default function GenerateRegistryPage() {
       {/* Center: 3D Preview */}
       <div className="flex-1 flex flex-col">
         <div className="p-4 border-b border-border">
-          <h2 className="text-lg font-semibold">
-            {selectedTile
-              ? `Просмотр: ${selectedTile.name}`
-              : 'Выберите тайл для просмотра'}
-          </h2>
-          {selectedTile && (
-            <p className="text-sm text-muted-foreground mt-1">
-              Кликните по кружку на грани для изменения типа соединения
-            </p>
-          )}
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h2 className="text-lg font-semibold">
+                {selectedTile
+                  ? `Просмотр: ${selectedTile.name}`
+                  : 'Выберите тайл для просмотра'}
+              </h2>
+              {selectedTile && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Кликните по кружку на грани для изменения типа соединения
+                </p>
+              )}
+            </div>
+            {selectedTile && (
+              <div className="ml-4">
+                <Button
+                  onClick={() => {
+                    setVisionDialogOpen(true)
+                    if (visionModels.length === 0) {
+                      loadVisionModels()
+                    }
+                  }}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  Vision анализ
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
-        <div className="flex-1 bg-muted/30 relative">
+        {/* 3D превью 1000x1000 с скругленными углами */}
+        <div className="w-[1000px] h-[1000px] bg-muted/30 relative border-b border-border mx-auto overflow-hidden rounded-lg">
           <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
         </div>
         {selectedTile && (
@@ -567,6 +834,130 @@ export default function GenerateRegistryPage() {
             </div>
           </div>
         )}
+
+        {/* Vision Analysis Dialog */}
+        <Dialog open={visionDialogOpen} onOpenChange={setVisionDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Vision анализ соединений</DialogTitle>
+              <DialogDescription>
+                Используйте локальную vision модель для автоматического определения типов соединений тайла
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="vision-url">URL локального сервера</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="vision-url"
+                    value={visionUrl}
+                    onChange={(e) => setVisionUrl(e.target.value)}
+                    placeholder="http://localhost:1234"
+                    className="flex-1"
+                  />
+                  <Button
+                    onClick={loadVisionModels}
+                    disabled={loadingVisionModels || analyzingVision}
+                    variant="outline"
+                    size="sm"
+                  >
+                    {loadingVisionModels ? (
+                      <>
+                        <CircleNotch className="mr-2 h-4 w-4 animate-spin" />
+                        Загрузка...
+                      </>
+                    ) : (
+                      'Загрузить'
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {visionModels.length > 0 && (
+                <div className="space-y-2">
+                  <Label htmlFor="vision-model">Vision модель</Label>
+                  <Select
+                    value={selectedVisionModel}
+                    onValueChange={setSelectedVisionModel}
+                  >
+                    <SelectTrigger id="vision-model">
+                      <SelectValue placeholder="Выберите модель">
+                        {selectedVisionModel || 'Выберите модель'}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {visionModels.map((model) => (
+                        <SelectItem key={model.id} value={model.id}>
+                          {model.id}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Найдено моделей: {visionModels.length}
+                    {selectedVisionModel && ` • Выбрано: ${selectedVisionModel}`}
+                  </p>
+                </div>
+              )}
+
+              {visionModels.length === 0 && !loadingVisionModels && (
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    Нажмите "Загрузить" для получения списка доступных vision моделей
+                  </p>
+                </div>
+              )}
+
+              {selectedTile && (
+                <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                  <p className="text-sm font-semibold mb-1">Тайл для анализа:</p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedTile.name} ({selectedTile.category}/{selectedTile.subcategory})
+                  </p>
+                </div>
+              )}
+
+              <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+                <p className="font-semibold mb-1">Примечание:</p>
+                <p>
+                  Vision анализ создаст 6 скриншотов тайла с разных углов и отправит их в модель для определения типов соединений.
+                  Это может занять 1-3 минуты в зависимости от модели.
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setVisionDialogOpen(false)} disabled={analyzingVision}>
+                Отмена
+              </Button>
+              <Button
+                onClick={async () => {
+                  await analyzeConnectionsWithVision()
+                  if (!analyzingVision) {
+                    setVisionDialogOpen(false)
+                  }
+                }}
+                disabled={
+                  analyzingVision ||
+                  !selectedVisionModel ||
+                  visionModels.length === 0 ||
+                  !selectedTile
+                }
+              >
+                {analyzingVision ? (
+                  <>
+                    <CircleNotch className="mr-2 h-4 w-4 animate-spin" />
+                    Анализ...
+                  </>
+                ) : (
+                  <>
+                    <Eye className="mr-2 h-4 w-4" />
+                    Анализировать соединения
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )
