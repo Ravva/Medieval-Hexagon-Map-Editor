@@ -406,7 +406,7 @@ function ModelPreview({ obj, mtl }: { obj: string; mtl: string }) {
   }, [obj, mtl])
 
   return (
-    <div className="relative w-full h-full bg-muted/20 rounded-lg overflow-hidden flex items-center justify-center">
+    <div className="relative w-full h-full overflow-hidden flex items-center justify-center">
       {!hasImage && <div className="absolute inset-0 flex items-center justify-center"><Cube className="animate-spin text-muted-foreground/30" size={24} /></div>}
       <canvas ref={canvasRef} width={120} height={120} className={cn("w-full h-full pointer-events-none transition-opacity duration-300", hasImage ? "opacity-100" : "opacity-0")} />
     </div>
@@ -2445,44 +2445,25 @@ export default function MapEditor() {
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden text-foreground selection:bg-primary/20">
       <aside className="w-80 border-r border-border bg-card/50 backdrop-blur-md flex flex-col z-20">
-        <div className="p-6 border-b border-border flex items-center justify-between bg-card/80">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
-              <MapTrifold size={24} className="text-primary" weight="fill" />
-              Editor
-            </h1>
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">Warlords Clone</p>
-          </div>
-          <Button variant="ghost" size="icon" onClick={() => window.location.href = '/'}>
-            <CaretLeft size={20} />
-          </Button>
+        <div className="p-6 border-b border-border bg-card/80">
+          <h1 className="text-xl font-bold tracking-tight flex flex-col items-center justify-center gap-2">
+            <div className="flex items-center justify-center gap-3">
+              <div className="w-6 h-6 overflow-visible flex items-center justify-center">
+                <div style={{ transform: 'scale(4)' }}>
+                  <ModelPreview obj="/assets/terrain/buildings/blue/building_home_B_blue.obj" mtl="/assets/terrain/buildings/blue/building_home_B_blue.mtl" />
+                </div>
+              </div>
+              <div className="flex flex-col items-start ml-[20px]">
+                <span>Medieval Hexagon Map</span>
+                <span>Editor</span>
+              </div>
+            </div>
+          </h1>
         </div>
         <ScrollArea className="flex-1">
           <div className="p-4 flex flex-col h-full gap-6 min-h-0">
             <section className="space-y-4">
-              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Map Config</Label>
-              <Select value={mapSize} onValueChange={(value) => setMapSize(value as MapSize)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(MAP_SIZES).map(([key, { label, width, height }]) => (
-                    <SelectItem key={key} value={key}>
-                      {label} {width}×{height}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                className="w-full"
-                onClick={handleInitializeMap}
-                disabled={!selectedModel}
-              >
-                {selectedModel ? 'Fill' : 'Select Tile to Fill'}
-              </Button>
-            </section>
-            <Separator />
-            <section className="space-y-4">
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Assets</Label>
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -2507,7 +2488,9 @@ export default function MapEditor() {
                     onClick={() => setSelectedModel(m)}
                     className={cn("p-1 rounded-xl border-2 transition-all cursor-pointer group hover:bg-muted/30", selectedModel?.name === m.name ? "border-primary bg-primary/5" : "border-transparent bg-muted/10")}
                   >
-                    <ModelPreview obj={m.obj} mtl={m.mtl} />
+                    <div className="aspect-square w-full">
+                      <ModelPreview obj={m.obj} mtl={m.mtl} />
+                    </div>
                     <p className="text-[11px] font-bold text-center mt-1 truncate px-1 py-1 uppercase tracking-tight">{m.name}</p>
                   </div>
                 ))}
@@ -2862,12 +2845,12 @@ export default function MapEditor() {
 
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between py-1.5 border-b border-border/30">
-                  <span className="text-muted-foreground">Move tile</span>
+                  <span className="text-muted-foreground">Move tile (if selected)</span>
                   <span className="bg-primary/20 px-2 py-0.5 rounded border border-primary/30 text-primary font-mono font-bold">WASD</span>
                 </div>
 
                 <div className="flex items-center justify-between py-1.5 border-b border-border/30">
-                  <span className="text-muted-foreground">Pan camera</span>
+                  <span className="text-muted-foreground">Pan camera (no selection)</span>
                   <span className="bg-primary/20 px-2 py-0.5 rounded border border-primary/30 text-primary font-mono font-bold">WASD</span>
                 </div>
 
@@ -2885,6 +2868,41 @@ export default function MapEditor() {
                   <span className="text-muted-foreground">Delete tile</span>
                   <span className="bg-destructive/20 px-2 py-0.5 rounded border border-destructive/30 text-destructive font-mono font-bold">DEL</span>
                 </div>
+
+                <div className="flex items-center justify-between py-1.5 border-b border-border/30">
+                  <span className="text-muted-foreground">Copy tile</span>
+                  <span className="bg-primary/20 px-2 py-0.5 rounded border border-primary/30 text-primary font-mono font-bold">Ctrl+C</span>
+                </div>
+
+                <div className="flex items-center justify-between py-1.5 border-b border-border/30">
+                  <span className="text-muted-foreground">Paste tile</span>
+                  <span className="bg-primary/20 px-2 py-0.5 rounded border border-primary/30 text-primary font-mono font-bold">Ctrl+V</span>
+                </div>
+
+                <div className="flex items-center justify-between py-1.5 border-b border-border/30">
+                  <span className="text-muted-foreground">Undo</span>
+                  <span className="bg-primary/20 px-2 py-0.5 rounded border border-primary/30 text-primary font-mono font-bold">Ctrl+Z</span>
+                </div>
+
+                <div className="flex items-center justify-between py-1.5 border-b border-border/30">
+                  <span className="text-muted-foreground">Redo</span>
+                  <span className="bg-primary/20 px-2 py-0.5 rounded border border-primary/30 text-primary font-mono font-bold">Ctrl+Y / Ctrl+Shift+Z</span>
+                </div>
+
+                <div className="flex items-center justify-between py-1.5 border-b border-border/30">
+                  <span className="text-muted-foreground">New map</span>
+                  <span className="bg-primary/20 px-2 py-0.5 rounded border border-primary/30 text-primary font-mono font-bold">Ctrl+N</span>
+                </div>
+
+                <div className="flex items-center justify-between py-1.5 border-b border-border/30">
+                  <span className="text-muted-foreground">Open map</span>
+                  <span className="bg-primary/20 px-2 py-0.5 rounded border border-primary/30 text-primary font-mono font-bold">Ctrl+O</span>
+                </div>
+
+                <div className="flex items-center justify-between py-1.5">
+                  <span className="text-muted-foreground">Save map</span>
+                  <span className="bg-primary/20 px-2 py-0.5 rounded border border-primary/30 text-primary font-mono font-bold">Ctrl+S</span>
+                </div>
               </div>
 
               <Separator className="my-3" />
@@ -2898,13 +2916,28 @@ export default function MapEditor() {
                 </div>
 
                 <div className="flex items-center justify-between py-1.5 border-b border-border/30">
+                  <span className="text-muted-foreground">Multiple selection</span>
+                  <span className="bg-primary/20 px-2 py-0.5 rounded border border-primary/30 text-primary font-bold">Ctrl+LMB</span>
+                </div>
+
+                <div className="flex items-center justify-between py-1.5 border-b border-border/30">
+                  <span className="text-muted-foreground">Copy tile (drag)</span>
+                  <span className="bg-primary/20 px-2 py-0.5 rounded border border-primary/30 text-primary font-bold">Ctrl+Drag</span>
+                </div>
+
+                <div className="flex items-center justify-between py-1.5 border-b border-border/30">
                   <span className="text-muted-foreground">Pan camera</span>
                   <span className="bg-primary/20 px-2 py-0.5 rounded border border-primary/30 text-primary font-bold">MMB</span>
                 </div>
 
-                <div className="flex items-center justify-between py-1.5">
+                <div className="flex items-center justify-between py-1.5 border-b border-border/30">
                   <span className="text-muted-foreground">Rotate camera</span>
                   <span className="bg-primary/20 px-2 py-0.5 rounded border border-primary/30 text-primary font-bold">RMB</span>
+                </div>
+
+                <div className="flex items-center justify-between py-1.5">
+                  <span className="text-muted-foreground">Zoom</span>
+                  <span className="bg-primary/20 px-2 py-0.5 rounded border border-primary/30 text-primary font-bold">Wheel</span>
                 </div>
               </div>
             </div>

@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Warlords Clone - Редактор карт',
+  title: 'Medieval Hexagon Map Editor',
   description: '3D редактор карт для игры Warlords Clone',
 }
 
