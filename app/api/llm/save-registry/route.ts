@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server'
 import fs from 'fs'
+import { NextResponse } from 'next/server'
 import path from 'path'
 import type { TileDescriptor } from '@/lib/llm/AssetAnalyzer'
 
@@ -8,6 +8,7 @@ interface RegistryData {
   generatedAt: string
   totalTiles: number
   tiles: TileDescriptor[]
+  approvedTiles?: string[] // Список ID утвержденных тайлов
   statistics?: {
     byCategory: Record<string, number>
     byBiome: Record<string, number>
@@ -24,12 +25,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid registry data' }, { status: 400 })
     }
 
-    // Prepare output (remove statistics for file)
+    // Prepare output (сохраняем approvedTiles)
     const outputData = {
       version: registryData.version,
       generatedAt: registryData.generatedAt,
       totalTiles: registryData.totalTiles,
       tiles: registryData.tiles,
+      approvedTiles: registryData.approvedTiles || [],
     }
 
     // Save to file
@@ -51,4 +53,3 @@ export async function POST(request: Request) {
     )
   }
 }
-

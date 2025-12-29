@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generatedAt": "2025-12-27T20:02:47.504Z",
+  "generatedAt": "2025-12-29T18:01:18.239Z",
   "totalTiles": 263,
   "tiles": [
     {
@@ -5472,7 +5472,15 @@
         "terrain_base"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "grass",
+        "northeast": "grass",
+        "northwest": "grass",
+        "west": "grass",
+        "southwest": "grass",
+        "southeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_base_hex_grass_bottom",
@@ -5497,7 +5505,15 @@
         "terrain_base"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "grass",
+        "northeast": "grass",
+        "northwest": "grass",
+        "west": "grass",
+        "southwest": "grass",
+        "southeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_base_hex_grass_sloped_high",
@@ -5522,7 +5538,15 @@
         "terrain_base"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "grass",
+        "northeast": "grass",
+        "northwest": "grass",
+        "west": "grass",
+        "southwest": "grass",
+        "southeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_base_hex_grass_sloped_low",
@@ -5547,7 +5571,15 @@
         "terrain_base"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "grass",
+        "west": "grass",
+        "southwest": "grass",
+        "southeast": "grass",
+        "northeast": "grass",
+        "northwest": "grass"
+      }
     },
     {
       "tile_id": "tiles_base_hex_water",
@@ -5573,7 +5605,15 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "water",
+        "northeast": "water",
+        "northwest": "water",
+        "west": "water",
+        "southwest": "water",
+        "southeast": "water"
+      }
     },
     {
       "tile_id": "tiles_coast_hex_coast_A",
@@ -5599,7 +5639,15 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "coast",
+        "southwest": "coast",
+        "southeast": "water",
+        "west": "grass",
+        "northwest": "grass",
+        "northeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_coast_hex_coast_A_waterless",
@@ -5625,7 +5673,14 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "coast",
+        "southwest": "coast",
+        "west": "grass",
+        "northwest": "grass",
+        "northeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_coast_hex_coast_B",
@@ -5651,7 +5706,15 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "coast",
+        "west": "coast",
+        "southwest": "water",
+        "southeast": "water",
+        "northwest": "grass",
+        "northeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_coast_hex_coast_B_waterless",
@@ -5677,7 +5740,13 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "coast",
+        "west": "coast",
+        "northwest": "grass",
+        "northeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_coast_hex_coast_C",
@@ -5703,7 +5772,15 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "west": "coast",
+        "southeast": "water",
+        "southwest": "water",
+        "east": "water",
+        "northeast": "coast",
+        "northwest": "grass"
+      }
     },
     {
       "tile_id": "tiles_coast_hex_coast_C_waterless",
@@ -5729,7 +5806,12 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "west": "coast",
+        "northeast": "coast",
+        "northwest": "grass"
+      }
     },
     {
       "tile_id": "tiles_coast_hex_coast_D",
@@ -5755,7 +5837,15 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "west": "coast",
+        "northwest": "coast",
+        "southwest": "water",
+        "southeast": "water",
+        "east": "water",
+        "northeast": "water"
+      }
     },
     {
       "tile_id": "tiles_coast_hex_coast_D_waterless",
@@ -5781,7 +5871,11 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "west": "coast",
+        "northwest": "coast"
+      }
     },
     {
       "tile_id": "tiles_coast_hex_coast_E",
@@ -5807,7 +5901,15 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "southwest": "coast",
+        "southeast": "coast",
+        "west": "grass",
+        "northwest": "grass",
+        "northeast": "grass",
+        "east": "grass"
+      }
     },
     {
       "tile_id": "tiles_coast_hex_coast_E_waterless",
@@ -5833,7 +5935,15 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "southeast": "coast",
+        "southwest": "coast",
+        "west": "grass",
+        "northwest": "grass",
+        "northeast": "grass",
+        "east": "grass"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_A",
@@ -5859,7 +5969,15 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "river",
+        "west": "river",
+        "southwest": "grass",
+        "southeast": "grass",
+        "northwest": "grass",
+        "northeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_A_curvy",
@@ -5885,7 +6003,15 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "river",
+        "west": "river",
+        "southwest": "grass",
+        "southeast": "grass",
+        "northeast": "grass",
+        "northwest": "grass"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_A_curvy_waterless",
@@ -5911,7 +6037,8 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {}
     },
     {
       "tile_id": "tiles_rivers_hex_river_A_waterless",
@@ -5937,7 +6064,13 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "southwest": "grass",
+        "southeast": "grass",
+        "northwest": "grass",
+        "northeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_B",
@@ -5963,7 +6096,15 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "northeast": "river",
+        "west": "river",
+        "northwest": "grass",
+        "southwest": "grass",
+        "southeast": "grass",
+        "east": "grass"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_B_waterless",
@@ -5989,7 +6130,13 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "northwest": "grass",
+        "southwest": "grass",
+        "southeast": "grass",
+        "east": "grass"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_C",
@@ -6015,7 +6162,15 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "grass",
+        "northeast": "grass",
+        "northwest": "river",
+        "west": "river",
+        "southwest": "grass",
+        "southeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_C_waterless",
@@ -6041,7 +6196,13 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "grass",
+        "northeast": "grass",
+        "southwest": "grass",
+        "southeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_crossing_A",
@@ -6067,7 +6228,15 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "river",
+        "west": "river",
+        "southeast": "road",
+        "northwest": "road",
+        "southwest": "grass",
+        "northeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_crossing_A_waterless",
@@ -6093,7 +6262,13 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "southeast": "road",
+        "northwest": "road",
+        "southwest": "grass",
+        "northeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_crossing_B",
@@ -6119,7 +6294,15 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "river",
+        "northeast": "road",
+        "west": "river",
+        "southwest": "road",
+        "southeast": "grass",
+        "northwest": "grass"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_crossing_B_waterless",
@@ -6145,7 +6328,13 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "northeast": "road",
+        "southwest": "road",
+        "southeast": "grass",
+        "northwest": "grass"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_D",
@@ -6171,7 +6360,15 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "grass",
+        "northeast": "river",
+        "northwest": "grass",
+        "west": "river",
+        "southwest": "grass",
+        "southeast": "river"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_D_waterless",
@@ -6197,7 +6394,12 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "grass",
+        "northwest": "grass",
+        "southwest": "grass"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_E",
@@ -6223,7 +6425,15 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "river",
+        "northeast": "river",
+        "northwest": "grass",
+        "west": "river",
+        "southwest": "grass",
+        "southeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_E_waterless",
@@ -6249,7 +6459,12 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "northwest": "grass",
+        "southwest": "grass",
+        "southeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_F",
@@ -6275,7 +6490,15 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "river",
+        "northeast": "grass",
+        "northwest": "grass",
+        "west": "river",
+        "southwest": "grass",
+        "southeast": "river"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_F_waterless",
@@ -6301,7 +6524,12 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "northeast": "grass",
+        "northwest": "grass",
+        "southwest": "grass"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_G",
@@ -6327,7 +6555,15 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "grass",
+        "northeast": "grass",
+        "northwest": "river",
+        "west": "river",
+        "southwest": "river",
+        "southeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_G_waterless",
@@ -6353,7 +6589,12 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "grass",
+        "northeast": "grass",
+        "southeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_H",
@@ -6379,7 +6620,15 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "river",
+        "northeast": "grass",
+        "northwest": "river",
+        "west": "river",
+        "southwest": "river",
+        "southeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_H_waterless",
@@ -6405,7 +6654,11 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "northeast": "grass",
+        "southeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_I",
@@ -6431,7 +6684,15 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "grass",
+        "northeast": "river",
+        "northwest": "river",
+        "west": "grass",
+        "southwest": "river",
+        "southeast": "river"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_I_waterless",
@@ -6457,7 +6718,11 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "grass",
+        "west": "grass"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_J",
@@ -6483,7 +6748,15 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "river",
+        "northeast": "grass",
+        "northwest": "grass",
+        "west": "river",
+        "southwest": "river",
+        "southeast": "river"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_J_waterless",
@@ -6509,7 +6782,11 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "northeast": "grass",
+        "northwest": "grass"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_K",
@@ -6535,7 +6812,15 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "grass",
+        "northeast": "river",
+        "northwest": "river",
+        "west": "river",
+        "southwest": "river",
+        "southeast": "river"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_K_waterless",
@@ -6561,7 +6846,10 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "grass"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_L",
@@ -6587,7 +6875,15 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "river",
+        "northeast": "river",
+        "northwest": "river",
+        "west": "river",
+        "southwest": "river",
+        "southeast": "river"
+      }
     },
     {
       "tile_id": "tiles_rivers_hex_river_L_waterless",
@@ -6613,7 +6909,8 @@
         "terrain_base"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {}
     },
     {
       "tile_id": "tiles_roads_hex_road_A",
@@ -6640,7 +6937,15 @@
         "walkable"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "road",
+        "west": "road",
+        "southwest": "grass",
+        "southeast": "grass",
+        "northeast": "grass",
+        "northwest": "grass"
+      }
     },
     {
       "tile_id": "tiles_roads_hex_road_A_sloped_high",
@@ -6667,7 +6972,15 @@
         "walkable"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "road",
+        "west": "road",
+        "southwest": "grass",
+        "southeast": "grass",
+        "northeast": "grass",
+        "northwest": "grass"
+      }
     },
     {
       "tile_id": "tiles_roads_hex_road_A_sloped_low",
@@ -6694,7 +7007,15 @@
         "walkable"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "road",
+        "west": "road",
+        "southwest": "grass",
+        "northwest": "grass",
+        "northeast": "grass",
+        "southeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_roads_hex_road_B",
@@ -6721,7 +7042,15 @@
         "walkable"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "northeast": "road",
+        "west": "road",
+        "southwest": "grass",
+        "southeast": "grass",
+        "east": "grass",
+        "northwest": "grass"
+      }
     },
     {
       "tile_id": "tiles_roads_hex_road_C",
@@ -6748,7 +7077,15 @@
         "walkable"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "northwest": "road",
+        "west": "road",
+        "southwest": "grass",
+        "southeast": "grass",
+        "east": "grass",
+        "northeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_roads_hex_road_D",
@@ -6775,7 +7112,15 @@
         "walkable"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "northeast": "road",
+        "west": "road",
+        "southeast": "road",
+        "southwest": "grass",
+        "northwest": "grass",
+        "east": "grass"
+      }
     },
     {
       "tile_id": "tiles_roads_hex_road_E",
@@ -6802,7 +7147,15 @@
         "walkable"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "road",
+        "northeast": "road",
+        "west": "road",
+        "southwest": "grass",
+        "southeast": "grass",
+        "northwest": "grass"
+      }
     },
     {
       "tile_id": "tiles_roads_hex_road_F",
@@ -6829,7 +7182,15 @@
         "walkable"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "road",
+        "west": "road",
+        "southeast": "road",
+        "southwest": "grass",
+        "northwest": "grass",
+        "northeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_roads_hex_road_G",
@@ -6856,7 +7217,15 @@
         "walkable"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "northwest": "road",
+        "west": "road",
+        "southwest": "road",
+        "southeast": "grass",
+        "east": "grass",
+        "northeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_roads_hex_road_H",
@@ -6883,7 +7252,15 @@
         "walkable"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "northwest": "road",
+        "west": "road",
+        "southwest": "road",
+        "southeast": "grass",
+        "east": "road",
+        "northeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_roads_hex_road_I",
@@ -6910,7 +7287,15 @@
         "walkable"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "northeast": "road",
+        "northwest": "road",
+        "southwest": "road",
+        "southeast": "road",
+        "west": "grass",
+        "east": "grass"
+      }
     },
     {
       "tile_id": "tiles_roads_hex_road_J",
@@ -6937,7 +7322,15 @@
         "walkable"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "road",
+        "west": "road",
+        "southwest": "road",
+        "southeast": "road",
+        "northwest": "grass",
+        "northeast": "grass"
+      }
     },
     {
       "tile_id": "tiles_roads_hex_road_K",
@@ -6964,7 +7357,15 @@
         "walkable"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "northeast": "road",
+        "northwest": "road",
+        "west": "road",
+        "southwest": "road",
+        "southeast": "road",
+        "east": "grass"
+      }
     },
     {
       "tile_id": "tiles_roads_hex_road_L",
@@ -6991,7 +7392,15 @@
         "walkable"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "east": "road",
+        "northeast": "road",
+        "northwest": "road",
+        "west": "road",
+        "southwest": "road",
+        "southeast": "road"
+      }
     },
     {
       "tile_id": "tiles_roads_hex_road_M",
@@ -7018,7 +7427,77 @@
         "walkable"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "connections": {
+        "west": "road",
+        "southwest": "grass",
+        "southeast": "grass",
+        "east": "grass",
+        "northeast": "grass",
+        "northwest": "grass"
+      }
     }
+  ],
+  "approvedTiles": [
+    "tiles_base_hex_grass",
+    "tiles_base_hex_grass_bottom",
+    "tiles_base_hex_grass_sloped_high",
+    "tiles_base_hex_grass_sloped_low",
+    "tiles_base_hex_water",
+    "tiles_coast_hex_coast_A",
+    "tiles_coast_hex_coast_A_waterless",
+    "tiles_coast_hex_coast_B",
+    "tiles_coast_hex_coast_B_waterless",
+    "tiles_coast_hex_coast_C",
+    "tiles_coast_hex_coast_C_waterless",
+    "tiles_coast_hex_coast_D",
+    "tiles_coast_hex_coast_D_waterless",
+    "tiles_coast_hex_coast_E",
+    "tiles_coast_hex_coast_E_waterless",
+    "tiles_rivers_hex_river_A",
+    "tiles_rivers_hex_river_A_curvy",
+    "tiles_rivers_hex_river_A_curvy_waterless",
+    "tiles_rivers_hex_river_A_waterless",
+    "tiles_rivers_hex_river_B",
+    "tiles_rivers_hex_river_B_waterless",
+    "tiles_rivers_hex_river_C",
+    "tiles_rivers_hex_river_C_waterless",
+    "tiles_rivers_hex_river_crossing_A",
+    "tiles_rivers_hex_river_crossing_A_waterless",
+    "tiles_rivers_hex_river_crossing_B",
+    "tiles_rivers_hex_river_crossing_B_waterless",
+    "tiles_rivers_hex_river_D",
+    "tiles_rivers_hex_river_D_waterless",
+    "tiles_rivers_hex_river_E",
+    "tiles_rivers_hex_river_E_waterless",
+    "tiles_rivers_hex_river_F",
+    "tiles_rivers_hex_river_F_waterless",
+    "tiles_rivers_hex_river_G",
+    "tiles_rivers_hex_river_G_waterless",
+    "tiles_rivers_hex_river_H",
+    "tiles_rivers_hex_river_H_waterless",
+    "tiles_rivers_hex_river_I",
+    "tiles_rivers_hex_river_I_waterless",
+    "tiles_rivers_hex_river_J",
+    "tiles_rivers_hex_river_J_waterless",
+    "tiles_rivers_hex_river_K",
+    "tiles_rivers_hex_river_K_waterless",
+    "tiles_rivers_hex_river_L",
+    "tiles_rivers_hex_river_L_waterless",
+    "tiles_roads_hex_road_A",
+    "tiles_roads_hex_road_A_sloped_high",
+    "tiles_roads_hex_road_A_sloped_low",
+    "tiles_roads_hex_road_B",
+    "tiles_roads_hex_road_C",
+    "tiles_roads_hex_road_D",
+    "tiles_roads_hex_road_E",
+    "tiles_roads_hex_road_F",
+    "tiles_roads_hex_road_G",
+    "tiles_roads_hex_road_H",
+    "tiles_roads_hex_road_I",
+    "tiles_roads_hex_road_J",
+    "tiles_roads_hex_road_K",
+    "tiles_roads_hex_road_L",
+    "tiles_roads_hex_road_M"
   ]
 }

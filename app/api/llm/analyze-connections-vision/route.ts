@@ -9,7 +9,7 @@ export const maxDuration = 300 // 5 минут для vision анализа
  *
  * Body:
  * {
- *   images: string[], // Base64 encoded images (6 images, one for each hex edge)
+ *   image: string, // Base64 encoded image of the tile
  *   localUrl: string,
  *   model: string,
  *   tileType?: 'river' | 'road' | 'coast' | 'base' | 'other',
@@ -19,11 +19,11 @@ export const maxDuration = 300 // 5 минут для vision анализа
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { images, localUrl, model, tileType, biome } = body
+    const { image, localUrl, model, tileType, biome } = body
 
-    if (!images || !Array.isArray(images) || images.length !== 6) {
+    if (!image || typeof image !== 'string') {
       return NextResponse.json(
-        { error: 'Exactly 6 images are required (one for each hex edge)' },
+        { error: 'Image is required as base64 string' },
         { status: 400 }
       )
     }
@@ -35,33 +35,40 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Направления гексагона (flat-topped) с правильной ориентацией: Север вверху, Юг внизу
-    // Углы отсчитываются от Востока (0°) по часовой стрелке
-    // Для flat-topped гексагона с Севером вверху:
-    const directions = [
-      { name: 'east', angle: 0, label: 'E', position: 'right' },      // Справа
-      { name: 'southeast', angle: 60, label: 'SE', position: 'right-bottom' },  // Справа-вниз
-      { name: 'southwest', angle: 120, label: 'SW', position: 'left-bottom' },  // Слева-вниз
-      { name: 'west', angle: 180, label: 'W', position: 'left' },     // Слева
-      { name: 'northwest', angle: 240, label: 'NW', position: 'left-top' },      // Слева-вверх (СЕВЕР)
-      { name: 'northeast', angle: 300, label: 'NE', position: 'right-top' },    // Справа-вверх (СЕВЕР)
-    ]
+    // Создаем промпт для vision модели
+    const systemMessage = `You are an expert at analyzing 3D hexagonal tile models for a grid-based game.
+Your task is to determine the connection type for each of the 6 edges of a hexagonal tile by analyzing the PHYSICAL EDGES between the top hexagonal surface and side faces.
 
-    // Создаем промпт для vision модели с правильной ориентацией
-    const systemMessage = `You are an expert at analyzing 3D tile models for a hexagonal grid game.
-Your task is to determine the connection type for each of the 6 edges of a hexagonal tile.
+CRITICAL UNDERSTANDING - PHYSICAL EDGE DETECTION:
+- A connection exists ONLY where there is a PHYSICAL EDGE/LINE between the top hexagonal surface and a side face
+- If you see an "empty space" or "cliff" (no connecting line), there is NO connection (use null)
+- If you see a clear LINE/EDGE between top surface and side face, there IS a connection
+- The connection type is determined by the COLOR/TEXTURE of that edge area
 
-IMPORTANT: The tile is oriented with NORTH at the TOP and SOUTH at the BOTTOM (standard map orientation).
+IMPORTANT ORIENTATION: The tile is viewed from a 3/4 isometric perspective where:
+- The hexagon is "flat-topped" (two horizontal edges at top and bottom)
+- NORTH is at the TOP of the image
+- SOUTH is at the BOTTOM of the image
+- You can see the top surface and some side faces
+- Some edges may be "missing" (cliffs/empty space) while others have clear connecting lines
 
-Connection types:
-- "grass": Green terrain, vegetation, land
-- "water": Blue water, river, lake
-- "coast": Transition between land and water (sandy, beach-like)
-- "road": Brown/dirt path, road surface
-- "unknown": Cannot determine or no connection
+ANALYSIS METHOD:
+1. Look at each of the 6 hexagon directions (going clockwise from East)
+2. Check if there is a VISIBLE EDGE/LINE between the top surface and that direction
+3. If NO edge line visible (empty space/cliff) → use null (no connection)
+4. If edge line IS visible → determine connection type by the color/texture of that edge area
 
-You will receive 6 images, each showing the tile from a different angle focusing on one edge.
-For each image, determine if that edge has a connection and what type it is.
+Connection types for EXISTING physical edges:
+- "grass": Green colors, vegetation textures, land surface
+- "water": Blue/white colors, water-like textures, reflective surfaces
+- "coast": Sandy/beige colors with grass, beach-like textures, coastal transition areas
+- "road": Narrow strip of sandy/beige color with lots of grass around it, path-like surface
+
+EDGE IDENTIFICATION GUIDE:
+- Look for clear LINES where the top hexagonal surface meets side faces
+- Missing edges appear as "empty space" or "cliffs" with no connecting geometry
+- Present edges show as clear boundaries between top surface and side faces
+- The color of the edge area determines the connection type
 
 Return a JSON object with this exact structure:
 {
@@ -75,49 +82,49 @@ Return a JSON object with this exact structure:
   }
 }
 
-If an edge has no connection (solid wall, closed), use null.
-Only include edges that have visible connections.`
+Use null for directions where no physical edge exists (empty space/cliff).`
 
-    const userPrompt = `Analyze these 6 images of a hexagonal tile. Each image shows the tile from a different angle, focusing on one edge.
+    const userPrompt = `Analyze this image of a hexagonal tile viewed from a 3/4 perspective angle.
 
-CRITICAL: The tile is oriented with NORTH at the TOP and SOUTH at the BOTTOM (standard map orientation).
+CRITICAL ORIENTATION:
+- The hexagon is "flat-topped" with NORTH at the TOP and SOUTH at the BOTTOM
+- You can see the top surface and some side edges from this viewing angle
+- The tile appears to have connections on certain edges based on color/texture
 
 Tile context:
 - Type: ${tileType || 'unknown'}
 - Biome: ${biome || 'unknown'}
 
-Image order (one image per edge, viewed from outside):
-1. East (E) - RIGHT side of the tile (0°)
-2. Southeast (SE) - RIGHT-BOTTOM edge (60°)
-3. Southwest (SW) - LEFT-BOTTOM edge (120°)
-4. West (W) - LEFT side of the tile (180°)
-5. Northwest (NW) - LEFT-TOP edge (240°) - this is NORTH direction
-6. Northeast (NE) - RIGHT-TOP edge (300°) - this is NORTH direction
+ANALYSIS INSTRUCTIONS:
+Look at each of the 6 hexagon edges in this order (clockwise from East):
+1. East (E) - Right side of the hexagon
+2. Southeast (SE) - Right-bottom edge
+3. Southwest (SW) - Left-bottom edge
+4. West (W) - Left side of the hexagon
+5. Northwest (NW) - Left-top edge (NORTH direction)
+6. Northeast (NE) - Right-top edge (NORTH direction)
 
-Remember: NORTH is at the TOP, SOUTH is at the BOTTOM.
+For each edge, examine:
+- Is there a VISIBLE EDGE/LINE between the top surface and that direction?
+- If NO line visible (empty space/cliff) → null (no connection)
+- If line IS visible → determine connection type by color/texture of that edge area
 
-For each image, determine:
-1. Does this edge have a connection? (open path, not a solid wall)
-2. If yes, what type? (grass, water, coast, or road)
+Visual indicators for connection types (for EXISTING edges only):
+- Grass: Green colors, vegetation textures
+- Water: Blue/white colors, water/reflective textures
+- Coast: Sandy/beige colors with grass, beach textures, coastal areas
+- Road: Narrow sandy/beige strip with lots of grass around it, path textures
 
-Look for visual indicators:
-- Grass: Green textures, vegetation, flat land surface
-- Water: Blue colors, reflective surfaces, water textures
-- Coast: Sandy/beach textures, transition between land and water
-- Road: Brown/dirt textures, path-like surfaces
+EXAMPLE: In the provided image, you should see:
+- Some edges have clear lines between top surface and side faces (connections exist)
+- Some edges show empty space/cliffs (no connections, use null)
+- For existing edges, determine type by color: grass (green), water (blue/white), coast (sandy+grass), road (narrow sandy strip)
 
-Return ONLY the JSON object with connections.`
+Return ONLY the JSON object with connections. Use null for edges with no physical connection (empty space/cliff).`
 
     // Формируем сообщения для vision API
     // OpenAI-совместимый формат для vision моделей
-    // Некоторые серверы требуют полный data URL, другие - только base64
-    const imageUrls = images.map((img: string) => {
-      if (img.startsWith('data:image/')) {
-        return img // Уже полный data URL
-      }
-      // Если только base64, добавляем префикс
-      return `data:image/png;base64,${img}`
-    })
+    const imageUrl = image.startsWith('data:image/') ? image : `data:image/png;base64,${image}`
 
     const messages: any[] = [
       { role: 'system', content: systemMessage },
@@ -125,12 +132,12 @@ Return ONLY the JSON object with connections.`
         role: 'user',
         content: [
           { type: 'text', text: userPrompt },
-          ...imageUrls.map((url: string) => ({
+          {
             type: 'image_url',
             image_url: {
-              url,
+              url: imageUrl,
             },
-          })),
+          },
         ],
       },
     ]
@@ -207,19 +214,17 @@ Return ONLY the JSON object with connections.`
 
     // Валидация и нормализация ответа
     const connections: TileConnections = {}
-    const validTypes = ['grass', 'water', 'coast', 'road', 'unknown']
+    const validTypes = ['grass', 'water', 'coast', 'road']
+    const directions = ['east', 'southeast', 'southwest', 'west', 'northwest', 'northeast']
 
     for (const dir of directions) {
-      const value = parsedResponse.connections?.[dir.name as keyof TileConnections]
+      const value = parsedResponse.connections?.[dir as keyof TileConnections]
       if (value === null || value === undefined) {
         // Нет соединения - не добавляем в результат
         continue
       }
       if (typeof value === 'string' && validTypes.includes(value)) {
-        connections[dir.name as keyof TileConnections] = value as any
-      } else if (value === 'unknown') {
-        // unknown тоже можно включить, но лучше null
-        continue
+        connections[dir as keyof TileConnections] = value as any
       }
     }
 

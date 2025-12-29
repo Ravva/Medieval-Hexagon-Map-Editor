@@ -30,7 +30,7 @@ export type HexDirection = keyof typeof HEX_DIRECTIONS
 /**
  * Connection type on hex edge
  */
-export type ConnectionType = 'grass' | 'water' | 'coast' | 'road' | 'unknown'
+export type ConnectionType = 'grass' | 'water' | 'river' | 'coast' | 'road' | 'none' | 'unknown'
 
 /**
  * Connection information for a tile
@@ -151,7 +151,9 @@ export function analyzeTileConnections(
 
   if (objPath.includes('hex_grass.obj')) {
     console.log(`[DEBUG hex_grass] centerX=${centerX}, centerZ=${centerZ}`)
-    console.log(`[DEBUG hex_grass] hexSize=${hexSize}, innerRadius=${innerRadius}, outerRadius=${outerRadius}`)
+    console.log(
+      `[DEBUG hex_grass] hexSize=${hexSize}, innerRadius=${innerRadius}, outerRadius=${outerRadius}`
+    )
   }
 
   // Map tile type to connection type
@@ -165,11 +167,16 @@ export function analyzeTileConnections(
     }
 
     switch (t) {
-      case 'base': return 'grass'
-      case 'coast': return 'coast'
-      case 'river': return 'water'
-      case 'road': return 'road'
-      default: return 'unknown'
+      case 'base':
+        return 'grass'
+      case 'coast':
+        return 'coast'
+      case 'river':
+        return 'river'
+      case 'road':
+        return 'road'
+      default:
+        return 'unknown'
     }
   }
 
@@ -217,7 +224,9 @@ export function analyzeTileConnections(
       const withinAngle = angleDiff <= EDGE_ANGLE_TOLERANCE
 
       if (objPath.includes('hex_grass.obj') && onRim) {
-        console.log(`[DEBUG hex_grass]   Vertex (${x.toFixed(3)}, ${z.toFixed(3)}): dist=${distance.toFixed(3)}, angle=${normalizedAngle.toFixed(1)}, diff=${angleDiff.toFixed(1)}, onRim=${onRim}, withinAngle=${withinAngle}`)
+        console.log(
+          `[DEBUG hex_grass]   Vertex (${x.toFixed(3)}, ${z.toFixed(3)}): dist=${distance.toFixed(3)}, angle=${normalizedAngle.toFixed(1)}, diff=${angleDiff.toFixed(1)}, onRim=${onRim}, withinAngle=${withinAngle}`
+        )
       }
 
       if (onRim && withinAngle) {
@@ -289,7 +298,7 @@ export function getConnectionsFromFilename(
   // Default pattern: East-West (river) and Northeast-Southwest (road)
   if (nameLower.includes('crossing')) {
     // Crossing: река и дорога пересекаются
-    const riverType: ConnectionType = 'water'
+    const riverType: ConnectionType = 'river'
     const roadType: ConnectionType = 'road'
     return {
       east: riverType,
@@ -388,7 +397,10 @@ export function combineConnections(
   filenameConnections: TileConnections | null
 ): TileConnections {
   // Filename heuristics take precedence (more reliable for known patterns)
-  if (filenameConnections && Object.values(filenameConnections).some((v) => v !== undefined && v !== null)) {
+  if (
+    filenameConnections &&
+    Object.values(filenameConnections).some((v) => v !== undefined && v !== null)
+  ) {
     return filenameConnections
   }
 
