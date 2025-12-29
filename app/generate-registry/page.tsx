@@ -494,7 +494,7 @@ export default function GenerateRegistryPage() {
       {/* Left Panel: Tile List */}
       <div className="w-96 border-r border-border bg-card">
         <div className="p-4 border-b border-border">
-          <h1 className="text-2xl font-bold mb-2">Генерация Реестра Тайлов</h1>
+          <h1 className="text-2xl font-bold mb-2">Tile Registry Generation</h1>
           <div className="flex gap-2">
             <Button onClick={generateRegistry} disabled={isGenerating} className="flex-1">
               {isGenerating ? (

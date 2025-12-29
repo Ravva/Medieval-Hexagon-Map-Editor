@@ -66,7 +66,7 @@ export default function TestLLMPage() {
     }
   }
 
-  // Функции для тестирования локального сервера
+  // Functions for testing local server
   const testLocalEndpoint = async (endpoint: string, method: 'GET' | 'POST', body?: any) => {
     setLoading(true)
     setError(null)
@@ -196,7 +196,7 @@ export default function TestLLMPage() {
     return data
   }
 
-  // Тесты для локальных моделей (аналогично Gemini)
+  // Tests for local models (similar to Gemini)
   const testLocalSimple = async () => {
     setLoading(true)
     setError(null)
@@ -405,7 +405,7 @@ Return ONLY valid JSON, no other text.`
         <CardHeader>
           <CardTitle>LLM API Test</CardTitle>
           <CardDescription>
-            Тестирование подключения к LLM API (Gemini или локальный сервер)
+            Testing connection to LLM API (Gemini or local server)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -418,7 +418,7 @@ Return ONLY valid JSON, no other text.`
             <TabsContent value="gemini" className="space-y-4">
               <div className="p-4 bg-cyan-500/10 border border-cyan-500/20 rounded-lg">
                 <p className="text-sm text-cyan-400">
-                  Тестирование Google Gemini API (gemini-2.5-flash - 1M input, 64K output токенов)
+                  Testing Google Gemini API (gemini-2.5-flash - 1M input, 64K output tokens)
                 </p>
               </div>
               <div className="flex gap-2 flex-wrap">
@@ -440,28 +440,28 @@ Return ONLY valid JSON, no other text.`
                   disabled={loading}
                   variant="outline"
                 >
-                  Список доступных моделей
+                  Available Models List
                 </Button>
                 <Button
                   onClick={() => runTest('simple')}
                   disabled={loading}
                   variant="default"
                 >
-                  Тест 1: Простое подключение
+                  Test 1: Simple Connection
                 </Button>
                 <Button
                   onClick={() => runTest('json-schema')}
                   disabled={loading}
                   variant="default"
                 >
-                  Тест 2: JSON Schema
+                  Test 2: JSON Schema
                 </Button>
                 <Button
                   onClick={() => runTest('hex-map-sample')}
                   disabled={loading}
                   variant="default"
                 >
-                  Тест 3: Пример карты (hex)
+                  Test 3: Map Example (hex)
                 </Button>
                 <Button
                   onClick={async () => {
@@ -494,7 +494,7 @@ Return ONLY valid JSON, no other text.`
                   disabled={loading}
                   variant="default"
                 >
-                  Тест 4: Генерация карты 5x5
+                  Test 4: Generate 5x5 Map
                 </Button>
               </div>
             </TabsContent>
@@ -502,7 +502,7 @@ Return ONLY valid JSON, no other text.`
             <TabsContent value="local" className="space-y-4">
               <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="local-url">URL локального сервера</Label>
+                  <Label htmlFor="local-url">Local Server URL</Label>
                   <div className="flex gap-2">
                     <Input
                       id="local-url"
@@ -516,17 +516,17 @@ Return ONLY valid JSON, no other text.`
                       disabled={modelsLoading || loading}
                       variant="outline"
                     >
-                      {modelsLoading ? 'Загрузка...' : 'Загрузить модели'}
+                      {modelsLoading ? 'Loading...' : 'Load Models'}
                     </Button>
                   </div>
                 </div>
 
                 {localModels.length > 0 && (
                   <div className="space-y-2">
-                    <Label htmlFor="model-select">Выберите модель</Label>
+                    <Label htmlFor="model-select">Select Model</Label>
                     <Select value={selectedModel} onValueChange={setSelectedModel}>
                       <SelectTrigger id="model-select">
-                        <SelectValue placeholder="Выберите модель" />
+                        <SelectValue placeholder="Select model" />
                       </SelectTrigger>
                       <SelectContent>
                         {localModels.map((model) => (
@@ -551,35 +551,35 @@ Return ONLY valid JSON, no other text.`
                   disabled={modelsLoading || loading}
                   variant="outline"
                 >
-                  Список доступных моделей
+                  Available Models List
                 </Button>
                 <Button
                   onClick={testLocalSimple}
                   disabled={loading || !selectedModel}
                   variant="default"
                 >
-                  Тест 1: Простое подключение
+                  Test 1: Simple Connection
                 </Button>
                 <Button
                   onClick={testLocalJsonSchema}
                   disabled={loading || !selectedModel}
                   variant="default"
                 >
-                  Тест 2: JSON Schema
+                  Test 2: JSON Schema
                 </Button>
                 <Button
                   onClick={testLocalHexMapSample}
                   disabled={loading || !selectedModel}
                   variant="default"
                 >
-                  Тест 3: Пример карты (hex)
+                  Test 3: Map Example (hex)
                 </Button>
                 <Button
                   onClick={testLocalGenerateMap}
                   disabled={loading || !selectedModel}
                   variant="default"
                 >
-                  Тест 4: Генерация карты 5x5
+                  Test 4: Generate 5x5 Map
                 </Button>
               </div>
             </TabsContent>
@@ -622,7 +622,7 @@ Return ONLY valid JSON, no other text.`
                 <div className="space-y-4">
                   {result.testType && (
                     <div>
-                      <strong className="text-cyan-400">Тип теста:</strong>{' '}
+                      <strong className="text-cyan-400">Test Type:</strong>{' '}
                       <code className="text-sm bg-black/30 px-2 py-1 rounded">
                         {result.testType}
                       </code>
@@ -641,19 +641,19 @@ Return ONLY valid JSON, no other text.`
 
           {apiMode === 'gemini' && (
             <div className="pt-4 border-t border-gray-700">
-              <h3 className="text-lg font-semibold mb-2">Описание тестов Gemini API:</h3>
+              <h3 className="text-lg font-semibold mb-2">Gemini API Test Descriptions:</h3>
               <ul className="space-y-2 text-sm text-gray-400">
                 <li>
-                  <strong className="text-cyan-400">Тест 1:</strong> Простая проверка
-                  подключения к API. Генерирует простой ответ без структуры.
+                  <strong className="text-cyan-400">Test 1:</strong> Simple connection
+                  check to the API. Generates a simple response without structure.
                 </li>
                 <li>
-                  <strong className="text-cyan-400">Тест 2:</strong> Проверка работы JSON
-                  Schema. API должен вернуть строго структурированный JSON согласно схеме.
+                  <strong className="text-cyan-400">Test 2:</strong> JSON Schema validation
+                  test. API should return strictly structured JSON according to schema.
                 </li>
                 <li>
-                  <strong className="text-cyan-400">Тест 3:</strong> Тест генерации примера
-                  гексагональной карты. Проверяет работу со схемой для будущей генерации карт.
+                  <strong className="text-cyan-400">Test 3:</strong> Hexagonal map generation
+                  example test. Checks schema functionality for future map generation.
                 </li>
               </ul>
             </div>
@@ -661,28 +661,28 @@ Return ONLY valid JSON, no other text.`
 
           {apiMode === 'local' && (
             <div className="pt-4 border-t border-gray-700">
-              <h3 className="text-lg font-semibold mb-2">Описание тестов локальных моделей:</h3>
+              <h3 className="text-lg font-semibold mb-2">Local Model Test Descriptions:</h3>
               <ul className="space-y-2 text-sm text-gray-400">
                 <li>
-                  <strong className="text-purple-400">Список моделей:</strong> Загружает список доступных моделей с локального сервера через GET /v1/models.
+                  <strong className="text-purple-400">Model List:</strong> Loads list of available models from local server via GET /v1/models.
                 </li>
                 <li>
-                  <strong className="text-purple-400">Тест 1:</strong> Простая проверка подключения к локальному API. Генерирует простой ответ без структуры.
+                  <strong className="text-purple-400">Test 1:</strong> Simple connection check to local API. Generates a simple response without structure.
                 </li>
                 <li>
-                  <strong className="text-purple-400">Тест 2:</strong> Проверка работы JSON Schema через OpenAI-совместимый формат. API должен вернуть строго структурированный JSON.
+                  <strong className="text-purple-400">Test 2:</strong> JSON Schema validation via OpenAI-compatible format. API should return strictly structured JSON.
                 </li>
                 <li>
-                  <strong className="text-purple-400">Тест 3:</strong> Тест генерации примера гексагональной карты. Проверяет работу со схемой для будущей генерации карт.
+                  <strong className="text-purple-400">Test 3:</strong> Hexagonal map generation example test. Checks schema functionality for future map generation.
                 </li>
                 <li>
-                  <strong className="text-purple-400">Тест 4:</strong> Генерация полноценной карты 5x5 с использованием выбранной локальной модели.
+                  <strong className="text-purple-400">Test 4:</strong> Generate a full 5x5 map using the selected local model.
                 </li>
               </ul>
               <div className="mt-4 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
                 <p className="text-xs text-purple-300">
-                  <strong>Примечание:</strong> Для работы тестов необходимо сначала загрузить список моделей и выбрать модель из списка.
-                  Локальный сервер должен поддерживать OpenAI-совместимый API формат (POST /v1/chat/completions).
+                  <strong>Note:</strong> To run tests, you must first load the model list and select a model from the list.
+                  Local server must support OpenAI-compatible API format (POST /v1/chat/completions).
                 </p>
               </div>
             </div>

@@ -471,6 +471,14 @@ export default function MapEditor() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
+  // Generation progress tracking
+  const [generationProgress, setGenerationProgress] = useState<{
+    stage: string
+    progress: number
+    thoughts: string
+    timeElapsed: number
+  } | null>(null)
+
   // Map state tracking
   const [mapName, setMapName] = useState<string>('')
   const [mapPath, setMapPath] = useState<string>('')
@@ -984,10 +992,15 @@ export default function MapEditor() {
         return
       }
 
-      setGenerateDialogOpen(false)
       setIsGenerating(true)
       setLoadingText('Generating map via LLM...')
       setIsLoading(true)
+      setGenerationProgress({
+        stage: 'Initializing...',
+        progress: 0,
+        thoughts: '',
+        timeElapsed: 0
+      })
 
       const mapDimensions = MAP_SIZES[generateMapSize]
 
@@ -998,6 +1011,7 @@ export default function MapEditor() {
         prompt: generatePrompt.trim(),
         biome: generateBiome,
         returnFormat: 'serialized',
+        stream: useLocalModel, // Enable streaming for local models
       }
 
       // Добавляем параметры локальной модели, если используется
@@ -1007,9 +1021,20 @@ export default function MapEditor() {
         requestBody.model = selectedLocalModel || localModels[0]?.id
       }
 
-      // Увеличиваем timeout для локальных моделей (могут генерировать долго)
-      const timeout = useLocalModel ? 600000 : 30000 // 10 минут для локальных, 30 сек для Gemini
+      // Increase timeout for local models (may take longer to generate)
+      const timeout = useLocalModel ? 600000 : 30000 // 10 minutes for local, 30 sec for Gemini
       const controller = new AbortController()
+
+      // Start progress tracking
+      const startTime = Date.now()
+      const progressInterval = setInterval(() => {
+        if (generationProgress) {
+          setGenerationProgress(prev => prev ? {
+            ...prev,
+            timeElapsed: Math.floor((Date.now() - startTime) / 1000)
+          } : null)
+        }
+      }, 1000)
       const timeoutId = setTimeout(() => controller.abort(), timeout)
 
       const response = await fetch('/api/llm/generate-map', {
@@ -1017,7 +1042,10 @@ export default function MapEditor() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
         signal: controller.signal,
-      }).finally(() => clearTimeout(timeoutId))
+      }).finally(() => {
+        clearTimeout(timeoutId)
+        clearInterval(progressInterval)
+      })
 
       if (!response.ok) {
         let errorData: any
@@ -1030,16 +1058,91 @@ export default function MapEditor() {
         throw new Error(errorData.error || 'Map generation error')
       }
 
+      // Check if response is streaming (for debug data)
+      const contentType = response.headers.get('content-type')
       let data: any
-      try {
-        data = await response.json()
-      } catch (e) {
-        const text = await response.text()
-        throw new Error(`Failed to parse response: ${e instanceof Error ? e.message : String(e)}\nResponse: ${text.substring(0, 500)}`)
+
+      if (contentType?.includes('text/plain') || contentType?.includes('text/event-stream')) {
+        // Handle streaming response with debug data
+        const reader = response.body?.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+        let finalData: any = null
+
+        if (reader) {
+          try {
+            while (true) {
+              const { done, value } = await reader.read()
+              if (done) break
+
+              buffer += decoder.decode(value, { stream: true })
+              const lines = buffer.split('\n')
+              buffer = lines.pop() || '' // Keep incomplete line in buffer
+
+              for (const line of lines) {
+                if (line.trim()) {
+                  // Parse debug data
+                  if (line.includes('Prompt processing progress')) {
+                    const match = line.match(/(\d+)%/)
+                    if (match) {
+                      setGenerationProgress(prev => prev ? {
+                        ...prev,
+                        stage: 'Processing prompt...',
+                        progress: parseInt(match[1])
+                      } : null)
+                    }
+                  } else if (line.includes('Thought for')) {
+                    const match = line.match(/Thought for (\d+) seconds/)
+                    if (match) {
+                      setGenerationProgress(prev => prev ? {
+                        ...prev,
+                        stage: 'Thinking...',
+                        progress: Math.min(prev.progress + 10, 90)
+                      } : null)
+                    }
+                  } else if (line.startsWith('{') && line.includes('success')) {
+                    // Final JSON response
+                    try {
+                      finalData = JSON.parse(line)
+                    } catch (e) {
+                      console.warn('Failed to parse final JSON:', e)
+                    }
+                  } else {
+                    // Thoughts/reasoning
+                    setGenerationProgress(prev => prev ? {
+                      ...prev,
+                      thoughts: line.trim()
+                    } : null)
+                  }
+                }
+              }
+            }
+          } finally {
+            reader.releaseLock()
+          }
+        }
+
+        if (!finalData) {
+          throw new Error('No final response received from streaming API')
+        }
+        data = finalData
+      } else {
+        // Handle regular JSON response
+        try {
+          data = await response.json()
+        } catch (e) {
+          const text = await response.text()
+          throw new Error(`Failed to parse response: ${e instanceof Error ? e.message : String(e)}\nResponse: ${text.substring(0, 500)}`)
+        }
       }
+
       if (!data.success || !data.mapData) {
         throw new Error('Invalid API response format')
       }
+
+      // Close dialog and clear progress
+      setGenerateDialogOpen(false)
+      setGenerationProgress(null)
 
       setLoadingText('Loading map...')
 
@@ -1094,15 +1197,16 @@ export default function MapEditor() {
       console.error('Failed to generate map:', error)
       setIsLoading(false)
       setIsGenerating(false)
+      setGenerationProgress(null) // Clear progress on error
 
       let errorMessage = error instanceof Error ? error.message : String(error)
 
       // Специальная обработка для timeout
       if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('fetch failed'))) {
         if (useLocalModel) {
-          errorMessage = 'Генерация прервана из-за таймаута. Локальные модели могут генерировать долго (5-10 минут). Попробуйте уменьшить размер карты или подождите дольше.'
+          errorMessage = 'Generation interrupted due to timeout. Local models may take a long time to generate (5-10 minutes). Try reducing map size or wait longer.'
         } else {
-          errorMessage = 'Генерация прервана из-за таймаута. Попробуйте еще раз.'
+          errorMessage = 'Generation interrupted due to timeout. Please try again.'
         }
       }
 
@@ -2550,16 +2654,16 @@ export default function MapEditor() {
                 <Tabs value={useLocalModel ? 'local' : 'gemini'} onValueChange={(v) => setUseLocalModel(v === 'local')}>
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="gemini">Gemini API</TabsTrigger>
-                    <TabsTrigger value="local">Локальный сервер</TabsTrigger>
+                    <TabsTrigger value="local">Local Server</TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
 
-              {/* Настройки локального сервера */}
+              {/* Local server settings */}
               {useLocalModel && (
                 <div className="space-y-3 p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
                   <div className="space-y-2">
-                    <Label htmlFor="local-model-url">URL локального сервера</Label>
+                    <Label htmlFor="local-model-url">Local Server URL</Label>
                     <div className="flex gap-2">
                       <Input
                         id="local-model-url"
@@ -2574,17 +2678,17 @@ export default function MapEditor() {
                         variant="outline"
                         size="sm"
                       >
-                        {loadingLocalModels ? '...' : 'Загрузить'}
+                        {loadingLocalModels ? '...' : 'Load'}
                       </Button>
                     </div>
                   </div>
 
                   {localModels.length > 0 && (
                     <div className="space-y-2">
-                      <Label htmlFor="local-model-select">Модель</Label>
+                      <Label htmlFor="local-model-select">Model</Label>
                       <Select value={selectedLocalModel} onValueChange={setSelectedLocalModel}>
                         <SelectTrigger id="local-model-select">
-                          <SelectValue placeholder="Выберите модель" />
+                          <SelectValue placeholder="Select model" />
                         </SelectTrigger>
                         <SelectContent>
                           {localModels.map((model) => (
@@ -2599,7 +2703,7 @@ export default function MapEditor() {
 
                   {localModels.length === 0 && !loadingLocalModels && (
                     <p className="text-xs text-purple-400">
-                      Нажмите "Загрузить" для получения списка моделей
+                      Click "Load" to fetch available models
                     </p>
                   )}
                 </div>
@@ -2644,14 +2748,46 @@ export default function MapEditor() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
-                <p className="font-semibold mb-1">Note:</p>
-                {useLocalModel ? (
-                  <p>Локальные модели могут генерировать карту 5-10 минут в зависимости от размера. Текущая карта будет заменена.</p>
-                ) : (
-                  <p>Generation may take 5-10 seconds. The current map will be replaced.</p>
-                )}
-              </div>
+
+              {/* Progress display during generation */}
+              {isGenerating && generationProgress ? (
+                <div className="space-y-3 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">{generationProgress.stage}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {generationProgress.timeElapsed}s elapsed
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${generationProgress.progress}%` }}
+                      />
+                    </div>
+                    {generationProgress.progress > 0 && (
+                      <span className="text-xs text-blue-400">{generationProgress.progress}%</span>
+                    )}
+                  </div>
+
+                  {generationProgress.thoughts && (
+                    <div className="mt-3 p-3 bg-gray-800/50 rounded border-l-4 border-blue-500">
+                      <p className="text-xs text-gray-300 font-mono leading-relaxed">
+                        {generationProgress.thoughts}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : !isGenerating ? (
+                <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+                  <p className="font-semibold mb-1">Note:</p>
+                  {useLocalModel ? (
+                    <p>Local models may take 5-10 minutes to generate a map depending on size. The current map will be replaced.</p>
+                  ) : (
+                    <p>Generation may take 5-10 seconds. The current map will be replaced.</p>
+                  )}
+                </div>
+              ) : null}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setGenerateDialogOpen(false)} disabled={isGenerating}>

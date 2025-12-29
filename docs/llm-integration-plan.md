@@ -451,53 +451,118 @@ class MapGenerator {
 
 ## 5. Промпт-инжиниринг и JSON Schema
 
-### 5.1. Системный промпт для генерации карты
+### 5.1. Эволюция подходов к промптам
 
-**Структура промпта:**
+#### 5.1.1. Алгоритмический подход (устарел)
+
+**Проблема:** Первоначальный подход пытался обучить модель сложным алгоритмам расчета поворотов и анализа соседей. Это приводило к тому, что модель "сдавалась" и выводила пустые массивы hexes из-за сложности задачи.
+
+**Пример неудачного промпта:**
+```
+ALGORITHM FOR RIVER CONNECTIONS:
+1. Plan your river path first (which hexes will have river)
+2. For each river hex, determine which neighbors are also river hexes
+3. Choose tile type based on number of river neighbors:
+   - 2 neighbors = use "tiles_rivers_hex_river_A"
+   - 3 neighbors = use "tiles_rivers_hex_river_E"
+4. Calculate rotation to align connections with actual neighbors
+
+ROTATION CALCULATION:
+Base connections rotate clockwise by rotation angle:
+- 0°: no change
+- 60°: each direction moves 1 step clockwise
+- etc.
+```
+
+**Результат:** Модель выводила `{"hexes": []}` с объяснением что задача слишком сложная.
+
+#### 5.1.2. Упрощенный подход с примерами (текущий)
+
+**Решение:** Заменить сложные алгоритмические инструкции на простые конкретные примеры с точными координатами и поворотами.
+
+**Успешный промпт:**
+```
+SIMPLE TASK: Create a river with an island in the middle.
+
+AVAILABLE TILES:
+- "tiles_base_hex_grass" - grass terrain
+- "tiles_rivers_hex_river_A" - straight river (connects east-west at 0° rotation)
+- "tiles_rivers_hex_river_E" - 3-way river junction (connects east-northeast-west at 0° rotation)
+
+SIMPLE EXAMPLE for 10x10 map:
+River flows horizontally across row 5 (r=5), splits at column 4, goes around island, merges at column 6.
+
+River path: (4,5)→(5,4) and (4,5)→(5,6), then (6,4)→(7,5) and (6,6)→(7,5)
+- (0,5) to (3,5): "tiles_rivers_hex_river_A", rotation 0
+- (4,5): "tiles_rivers_hex_river_E", rotation 0 (splits east→northeast+southeast)
+- (5,4): "tiles_rivers_hex_river_A", rotation 60 (northeast-southwest)
+- (5,6): "tiles_rivers_hex_river_A", rotation 300 (southeast-northwest)
+- (6,4): "tiles_rivers_hex_river_A", rotation 60
+- (6,6): "tiles_rivers_hex_river_A", rotation 300
+- (7,5): "tiles_rivers_hex_river_E", rotation 180 (merges northeast+southeast→west)
+- (8,5) to (9,5): "tiles_rivers_hex_river_A", rotation 0
+
+Island at (5,5): "tiles_base_hex_grass"
+All other positions: "tiles_base_hex_grass"
+
+Generate ALL ${width * height} hexes. All tiles height 0. Return JSON: {"hexes": [...]}
+```
+
+**Результат:** Модель успешно генерирует карты с правильными соединениями рек.
+
+#### 5.1.3. Ключевые принципы упрощенного подхода
+
+1. **Конкретные примеры вместо абстрактных алгоритмов**
+2. **Точные координаты и значения поворотов**
+3. **Простая формулировка задачи**
+4. **Готовый шаблон для копирования**
+5. **Минимум технических терминов**
+
+### 5.2. Системный промпт для генерации карты
+
+**Обновленная структура промпта (упрощенный подход):**
 
 ```typescript
-const SYSTEM_PROMPT = `You are an expert game designer specializing in creating hex-based tactical maps for turn-based strategy games.
+const SYSTEM_PROMPT = `You are an expert game designer. You must respond ONLY with valid JSON.
+Return a JSON object with this exact structure:
+{
+  "hexes": [
+    {
+      "q": number (0-${width - 1}),
+      "r": number (0-${height - 1}),
+      "tile_id": "string",
+      "rotation": number (0, 60, 120, 180, 240, or 300),
+      "height": number (0-4)
+    }
+  ]
+}`;
 
-Your task is to generate a hex map layout based on the provided parameters.
+const USER_PROMPT = `Create a ${width}x${height} hex map: "${prompt}". Biome: ${biome}.
 
-MAP COORDINATES SYSTEM:
-- This map uses AXIAL coordinates (q, r)
-- q ranges from 0 to ${width - 1}
-- r ranges from 0 to ${height - 1}
-- Distance formula: distance(a, b) = (|a.q - b.q| + |a.q + a.r - b.q - b.r| + |a.r - b.r|) / 2
-- Each hex has 6 neighbors
+SIMPLE TASK: Create a river with an island in the middle.
 
-HEIGHT SYSTEM:
-- Height levels: 0 (lowest) to 4 (highest)
-- Adjacent hexes should not differ by more than 1 height level (realistic slopes)
-- Mountains (height 3-4) should cluster together
-- Water is always height 0
+AVAILABLE TILES:
+- "tiles_base_hex_grass" - grass terrain
+- "tiles_rivers_hex_river_A" - straight river (connects east-west at 0° rotation)
+- "tiles_rivers_hex_river_E" - 3-way river junction (connects east-northeast-west at 0° rotation)
 
-TILE PLACEMENT RULES:
-1. Match biome to tile_id (use tiles with matching biome property)
-2. Ensure walkable paths between important areas
-3. Roads/rivers should form connected networks (use exits property)
-4. Buildings should be placed on flat terrain (height 0-1)
-5. Rotation should align tile exits with neighboring tiles
+SIMPLE EXAMPLE for 10x10 map:
+River flows horizontally across row 5 (r=5), splits at column 4, goes around island, merges at column 6.
 
-OUTPUT FORMAT:
-You must output a JSON array of hex objects with the following structure:
-- q: number (axial coordinate)
-- r: number (axial coordinate)
-- tile_id: string (must match a tile_id from the provided registry)
-- rotation: number (0, 60, 120, 180, 240, or 300 degrees)
-- height: number (0-4)
+River path: (4,5)→(5,4) and (4,5)→(5,6), then (6,4)→(7,5) and (6,6)→(7,5)
+- (0,5) to (3,5): "tiles_rivers_hex_river_A", rotation 0
+- (4,5): "tiles_rivers_hex_river_E", rotation 0 (splits east→northeast+southeast)
+- (5,4): "tiles_rivers_hex_river_A", rotation 60 (northeast-southwest)
+- (5,6): "tiles_rivers_hex_river_A", rotation 300 (southeast-northwest)
+- (6,4): "tiles_rivers_hex_river_A", rotation 60
+- (6,6): "tiles_rivers_hex_river_A", rotation 300
+- (7,5): "tiles_rivers_hex_river_E", rotation 180 (merges northeast+southeast→west)
+- (8,5) to (9,5): "tiles_rivers_hex_river_A", rotation 0
 
-CONSTRAINTS:
-- Theme: ${theme}
-- Map size: ${width}x${height}
-- Biome distribution: ${JSON.stringify(biomeDistribution)}
-- Maximum slope: 1 (adjacent hexes can differ by at most 1 height level)
+Island at (5,5): "tiles_base_hex_grass"
+All other positions: "tiles_base_hex_grass"
 
-TILE REGISTRY:
-${JSON.stringify(tileRegistry, null, 2)}
-
-Generate a realistic and playable map that fits the theme.`;
+Generate ALL ${width * height} hexes. All tiles height 0. Return JSON: {"hexes": [...]}`;
 ```
 
 ### 5.2. JSON Schema для валидации
@@ -641,7 +706,129 @@ class RealismValidator {
 
 ---
 
-## 7. Детальный план реализации
+## 8. Результаты реализации и уроки
+
+### 8.1. Статус реализации (декабрь 2025)
+
+**✅ Завершенные фазы:**
+- ✅ Фаза 1: Подготовка инфраструктуры (AssetAnalyzer, tile registry)
+- ✅ Фаза 2: Базовая генерация карт (MapGenerator, API endpoint)
+- ✅ Фаза 3: Интеграция в UI редактора (диалог генерации, прогресс-бар)
+- ✅ Фаза 4: Поддержка локальных LLM моделей (OpenAI-совместимый API)
+- ✅ Фаза 5: Упрощение промптов для исправления соединений рек
+
+**🔄 В процессе:**
+- Тестирование упрощенного подхода к промптам
+- Оптимизация качества генерации
+
+**📋 Запланированные:**
+- Иерархическая генерация (для больших карт)
+- Расширенная логика биомов
+- Дополнительные типы тайлов (дороги, здания)
+
+### 8.2. Ключевые уроки
+
+#### 8.2.1. Промпт-инжиниринг: простота побеждает сложность
+
+**Урок:** LLM модели лучше работают с конкретными примерами, чем с абстрактными алгоритмами.
+
+**Неудачный подход:**
+- Сложные инструкции по расчету поворотов
+- Абстрактные алгоритмы анализа соседей
+- Технические термины и формулы
+
+**Успешный подход:**
+- Конкретный пример с координатами
+- Готовый шаблон для копирования
+- Простая формулировка задачи
+
+**Результат:** Модель перестала выводить пустые массивы и начала генерировать правильные соединения.
+
+#### 8.2.2. Важность правильных tile_id
+
+**Проблема:** Модель изобретала несуществующие названия тайлов.
+
+**Решение:** Явно указать точные tile_id из реестра в промпте.
+
+**До:** `"river_tile"`, `"grass_hex"` (выдуманные названия)
+**После:** `"tiles_rivers_hex_river_A"`, `"tiles_base_hex_grass"` (точные ID)
+
+#### 8.2.3. Локальные модели как альтернатива
+
+**Преимущества локальных моделей:**
+- Нет лимитов на запросы
+- Полная приватность
+- Стабильная работа без интернета
+
+**Недостатки:**
+- Требуют больше времени на генерацию
+- Меньше качество следования инструкциям
+- Нужна локальная установка
+
+**Рекомендация:** Использовать облачные API для продакшена, локальные для разработки.
+
+### 8.3. Технические решения
+
+#### 8.3.1. Streaming API для отладочных данных
+
+**Реализация:** Добавлен streaming endpoint для показа прогресса генерации.
+
+**Преимущества:**
+- Пользователь видит прогресс
+- Отладочная информация в реальном времени
+- Лучший UX для долгих операций
+
+#### 8.3.2. Автоматическое исправление поворотов
+
+**Проблема:** Модель иногда выводит неправильные углы поворота.
+
+**Решение:** Автоматическое приведение к ближайшему валидному углу (0, 60, 120, 180, 240, 300).
+
+```typescript
+const validRotations = [0, 60, 120, 180, 240, 300]
+const nearest = validRotations.reduce((prev, curr) =>
+  Math.abs(curr - hex.rotation) < Math.abs(prev - hex.rotation) ? curr : prev
+)
+hex.rotation = nearest
+```
+
+#### 8.3.3. Увеличенный timeout для локальных моделей
+
+**Проблема:** Локальные модели работают медленнее облачных.
+
+**Решение:** Увеличен timeout до 10 минут для локальных запросов.
+
+```typescript
+export const maxDuration = 600 // 10 минут для Next.js API route
+```
+
+### 8.4. Рекомендации для будущих улучшений
+
+#### 8.4.1. Расширение библиотеки примеров
+
+**Идея:** Создать библиотеку готовых паттернов для разных типов карт:
+- Остров с рекой (текущий пример)
+- Горная цепь с перевалами
+- Лесной массив с полянами
+- Прибрежная зона с заливами
+
+#### 8.4.2. Валидация соединений
+
+**Идея:** Добавить постобработку для проверки правильности соединений:
+- Проверка что river тайлы действительно соединяются
+- Автоматическое исправление разрывов
+- Предупреждения о проблемных областях
+
+#### 8.4.3. Интерактивное редактирование
+
+**Идея:** Позволить пользователю корректировать сгенерированную карту:
+- Выделить проблемные соединения
+- Предложить альтернативные тайлы
+- Пересгенерировать отдельные области
+
+---
+
+## 9. Детальный план реализации
 
 ### Фаза 1: Подготовка инфраструктуры (1-2 дня)
 

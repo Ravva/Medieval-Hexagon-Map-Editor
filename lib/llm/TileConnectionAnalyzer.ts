@@ -269,7 +269,7 @@ export function getConnectionsFromFilename(
 ): TileConnections | null {
   const nameLower = fileName.toLowerCase()
 
-  // Определяем тип соединения по типу тайла и биому
+  // Determine connection type by tile type and biome
   let connectionType: ConnectionType = 'unknown'
   switch (tileType) {
     case 'river':

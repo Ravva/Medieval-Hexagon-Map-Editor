@@ -37,7 +37,7 @@ export async function GET() {
     // Используем gemini-2.5-flash - большие лимиты токенов (1M input, 64K output)
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
-    // Простой тест - генерация приветствия
+    // Simple test - generate greeting
     const prompt = 'Say "Hello, Gemini API is working!" in JSON format: {"message": "your message here"}'
 
     const result = await model.generateContent(prompt)

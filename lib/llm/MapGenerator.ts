@@ -151,16 +151,23 @@ HEIGHT SYSTEM - CRITICAL RULES:
 
 RIVER/ROAD CONNECTIVITY - CRITICAL:
 - Rivers and roads MUST form continuous, connected paths
-- Each tile has connection information in the "exits" field (if present)
-- The "exits" field indicates which of the 6 hex sides have connections:
+- Each tile has connection information in the "connections" field (if present)
+- The "connections" field indicates which of the 6 hex sides have connections:
   * east, northeast, northwest, west, southwest, southeast
-- When placing a tile, check its "exits" field to see which sides connect
+- Connection types: "river", "road", "water", "grass" - use tiles with matching connection types
+- When placing a tile, check its "connections" field to see which sides connect
 - Rotate tiles (0, 60, 120, 180, 240, 300 degrees) to align connections properly
 - CRITICAL RULE: If tile A connects to neighbor B at direction X, then:
-  * Tile A must have exit at direction X
-  * Tile B must have exit at the OPPOSITE direction (X + 180 degrees)
+  * Tile A must have connection at direction X
+  * Tile B must have connection at the OPPOSITE direction (X + 180 degrees)
   * Example: If A connects EAST to B, then A has "east: true" and B has "west: true"
-- For tiles with "exits" information, you MUST ensure adjacent tiles connect properly
+- CONNECTION COUNTS for rivers/roads:
+  * 2 connections = straight line or turn (most common)
+  * 3 connections = branching/merging point (for splits and joins)
+  * 4+ connections = complex intersections
+- For river branching/merging: use tiles with exactly 3 river connections
+- For road branching/merging: use tiles with exactly 3 road connections
+- All connections are equal - no "input/output" concept, just continuous flow
 - River tiles should form continuous networks without gaps or disconnected segments
 - Road tiles should form connected road networks
 - Always use height 0 for all river/road tiles
@@ -170,10 +177,13 @@ TILE PLACEMENT RULES:
 2. ALWAYS place a base tile (height 0) before placing elevated features (height > 0)
 3. For each position with elevated features, generate TWO hexes: base at height 0, feature at target height
 4. Ensure walkable paths between important areas
-5. Roads/rivers MUST form connected networks with proper rotation alignment
+5. Rivers/roads MUST form connected networks with proper connection alignment
 6. Buildings/structures must be placed on flat terrain (height 0-1) with base tile at height 0
 7. Rotation must be one of: 0, 60, 120, 180, 240, or 300 degrees
-8. For rivers: Rotate tiles to create continuous flow - adjacent river tiles must connect properly
+8. For rivers: Use tiles with "connections.river" and rotate to create continuous flow
+9. For roads: Use tiles with "connections.road" and rotate to create continuous paths
+10. For branching/merging: Use tiles with exactly 3 connections of the same type
+11. MANDATORY: Every non-base tile (decoration, building) MUST have a base tile at the same (q,r) position at height 0
 
 OUTPUT FORMAT:
 You must output a JSON object with a "hexes" array. Each hex object must have:
@@ -428,35 +438,44 @@ Generate a realistic and playable map based on the user's request. The primary b
         southeast: 'northwest',
       }
 
-      for (const [direction, hasConnection] of Object.entries(connections)) {
+      // Check each connection type (river, road, water, grass)
+      for (const [connectionType, hasConnection] of Object.entries(connections)) {
         if (!hasConnection) continue
 
-        const neighbor = directionMap[direction]
-        if (!neighbor) continue
+        // For each direction that has this connection type
+        for (const [direction] of Object.entries(directionMap)) {
+          // This is a simplified check - in reality we'd need to know which directions
+          // have which connection types, but the tile registry doesn't specify this level of detail
+          const neighbor = directionMap[direction]
+          if (!neighbor) continue
 
-        const neighborKey = `${neighbor.q},${neighbor.r}`
-        const neighborHex = hexMap.get(neighborKey)
+          const neighborKey = `${neighbor.q},${neighbor.r}`
+          const neighborHex = hexMap.get(neighborKey)
 
-        if (!neighborHex) {
-          // Neighbor doesn't exist (edge of map) - this is OK
-          continue
-        }
+          if (!neighborHex) {
+            // Neighbor doesn't exist (edge of map) - this is OK
+            continue
+          }
 
-        const neighborTile = tileRegistry.tiles.find((t) => t.tile_id === neighborHex.tile_id)
-        if (!neighborTile || !neighborTile.connections) {
-          // Neighbor is not a connectable tile - this might be an issue
-          issues.push(
-            `Tile ${hex.tile_id} at (${hex.q}, ${hex.r}) has connection ${direction} but neighbor at (${neighbor.q}, ${neighbor.r}) is not a connectable tile`
-          )
-          continue
-        }
+          const neighborTile = tileRegistry.tiles.find((t) => t.tile_id === neighborHex.tile_id)
+          if (!neighborTile || !neighborTile.connections) {
+            // Neighbor is not a connectable tile - this might be an issue for rivers/roads
+            if (connectionType === 'river' || connectionType === 'road') {
+              issues.push(
+                `Tile ${hex.tile_id} at (${hex.q}, ${hex.r}) has ${connectionType} connection but neighbor at (${neighbor.q}, ${neighbor.r}) is not connectable`
+              )
+            }
+            continue
+          }
 
-        // Check if neighbor has opposite connection
-        const oppositeDir = oppositeDirections[direction]
-        if (!neighborTile.connections[oppositeDir as keyof typeof neighborTile.connections]) {
-          issues.push(
-            `Tile ${hex.tile_id} at (${hex.q}, ${hex.r}) connects ${direction} to ${neighborHex.tile_id} at (${neighbor.q}, ${neighbor.r}), but neighbor doesn't have ${oppositeDir} connection`
-          )
+          // Check if neighbor has the same connection type
+          if (!neighborTile.connections[connectionType as keyof typeof neighborTile.connections]) {
+            if (connectionType === 'river' || connectionType === 'road') {
+              issues.push(
+                `Tile ${hex.tile_id} at (${hex.q}, ${hex.r}) has ${connectionType} connection but neighbor ${neighborHex.tile_id} at (${neighbor.q}, ${neighbor.r}) doesn't have ${connectionType} connection`
+              )
+            }
+          }
         }
       }
     }
