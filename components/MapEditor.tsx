@@ -721,11 +721,13 @@ export default function MapEditor() {
     else if (selectedFolder === 'mountains') terrain = TERRAIN_TYPES.MOUNTAIN
 
     // Initialize using offset coordinates, then convert to axial
+    // Fill the bottom level (height = 0) with the selected tile
     for (let y = 0; y < mapDimensions.height; y++) {
       for (let x = 0; x < mapDimensions.width; x++) {
         // Convert offset to axial for initialization
         const { q, r } = offsetToAxial(x, y)
         const h = new Hex(q, r, terrain)
+        h.height = 0 // Fill the bottom level (lowest level)
         h.modelData = model
         map.setHex(q, r, h)
       }
@@ -746,7 +748,7 @@ export default function MapEditor() {
 
   const showNotification = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message })
-    setTimeout(() => setNotification(null), 3000)
+    setTimeout(() => setNotification(null), 6000)
   }
 
   const handleSaveMap = () => {
@@ -882,7 +884,7 @@ export default function MapEditor() {
     }
   }
 
-  const handleNewMapConfirm = (newMapSize: MapSize, fillMap: boolean) => {
+  const handleNewMapConfirm = (newMapSize: MapSize, fillMap: boolean, selectedTile?: { tile_id: string; name: string; obj_path: string; mtl_path: string }) => {
     // Clear the current map
     if (mapRef.current) {
       mapRef.current.hexes.clear()
@@ -910,10 +912,19 @@ export default function MapEditor() {
 
     // Fill map with base tiles if requested
     if (fillMap) {
-      if (selectedModel) {
+      if (selectedTile) {
+        // Используем тайл из диалога
+        const model = {
+          obj: selectedTile.obj_path,
+          mtl: selectedTile.mtl_path,
+          name: selectedTile.name
+        }
+        handleInitializeMapWithModel(newMapSize, model)
+      } else if (selectedModel) {
+        // Fallback на выбранный тайл из левой панели
         handleInitializeMapWithModel(newMapSize, selectedModel)
       } else {
-        showNotification('error', 'Please select a tile from the left panel to use as template for filling')
+        showNotification('error', 'Please select a tile to use as template for filling')
         // Re-render the scene
         if (sceneRef.current && rendererRef.current && cameraRef.current) {
           rendererRef.current.render(sceneRef.current, cameraRef.current)
@@ -2677,24 +2688,6 @@ export default function MapEditor() {
           </DialogContent>
         </Dialog>
 
-        {/* Notification Toast */}
-        {notification && (
-          <div className={cn(
-            "fixed bottom-6 right-6 z-50 p-4 rounded-lg shadow-2xl border backdrop-blur-xl animate-in slide-in-from-bottom-4",
-            notification.type === 'success'
-              ? "bg-green-500/90 border-green-400/50 text-white"
-              : "bg-red-500/90 border-red-400/50 text-white"
-          )}>
-            <div className="flex items-center gap-2">
-              {notification.type === 'success' ? (
-                <FloppyDisk size={20} weight="fill" />
-              ) : (
-                <Trash size={20} weight="fill" />
-              )}
-              <span className="font-bold text-sm">{notification.message}</span>
-            </div>
-          </div>
-        )}
       </aside>
 
       <main className="flex-1 relative flex flex-col overflow-hidden bg-[#050505]" ref={containerRef}>
@@ -3072,6 +3065,25 @@ export default function MapEditor() {
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
       `}</style>
+
+      {/* Notification Toast - positioned at bottom right of viewport */}
+      {notification && (
+        <div className={cn(
+          "fixed bottom-6 right-6 z-[100] p-4 rounded-lg shadow-2xl border backdrop-blur-xl animate-in slide-in-from-bottom-4",
+          notification.type === 'success'
+            ? "bg-green-500/90 border-green-400/50 text-white"
+            : "bg-red-500/90 border-red-400/50 text-white"
+        )}>
+          <div className="flex items-center gap-2">
+            {notification.type === 'success' ? (
+              <FloppyDisk size={20} weight="fill" />
+            ) : (
+              <Trash size={20} weight="fill" />
+            )}
+            <span className="font-bold text-sm">{notification.message}</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

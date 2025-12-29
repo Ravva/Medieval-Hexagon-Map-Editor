@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(xargs:*)",
+      "Bash(bunx tsc:*)",
+      "Bash(npx tsx:*)",
+      "Bash(bun -e \"\nimport { analyzeTileConnections } from ''./lib/llm/TileConnectionAnalyzer.ts'';\n\nconst result = analyzeTileConnections\\(\n  ''assets/terrain/tiles/base/hex_grass.obj'',\n  ''assets/terrain/tiles/base/hex_grass.mtl'',\n  ''base''\n\\);\n\nconsole.log\\(''Result:'', JSON.stringify\\(result, null, 2\\)\\);\n\")",
+      "Bash(bunx biome check:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
+    ]
+  }
+}

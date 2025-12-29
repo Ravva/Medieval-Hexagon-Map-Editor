@@ -1,7 +1,7 @@
 'use client'
 
 import type React from 'react'
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { FileX } from 'lucide-react'
 import {
   Dialog,
@@ -21,6 +21,9 @@ import {
 } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import { TilePreview } from '@/components/TilePreview'
+import { cn } from '@/lib/utils'
+import tileRegistry from '@/lib/llm/tile-registry.json'
 
 type MapSize = 'tiny' | 'small' | 'medium' | 'large' | 'very-large'
 
@@ -35,7 +38,14 @@ const MAP_SIZES: Record<MapSize, { label: string; width: number; height: number 
 interface NewMapDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onConfirm: (mapSize: MapSize, fillMap: boolean) => void
+  onConfirm: (mapSize: MapSize, fillMap: boolean, selectedTile?: BaseTile) => void
+}
+
+interface BaseTile {
+  tile_id: string
+  name: string
+  obj_path: string
+  mtl_path: string
 }
 
 export function NewMapDialog({
@@ -45,9 +55,35 @@ export function NewMapDialog({
 }: NewMapDialogProps) {
   const [selectedSize, setSelectedSize] = useState<MapSize>('tiny')
   const [fillMap, setFillMap] = useState(false)
+  const [selectedTile, setSelectedTile] = useState<BaseTile | null>(null)
+
+  const baseTiles = useMemo(() => {
+    const tiles = (tileRegistry as any).tiles || []
+    return tiles.filter(
+      (tile: any) => tile.category === 'tiles' && tile.subcategory === 'base'
+    ) as BaseTile[]
+  }, [])
+
+  // Автоматически выбираем первый тайл при включении fillMap
+  useEffect(() => {
+    if (fillMap && baseTiles.length > 0 && !selectedTile) {
+      setSelectedTile(baseTiles[0])
+    }
+  }, [fillMap, baseTiles, selectedTile])
+
+  // Сбрасываем выбранный тайл при закрытии диалога
+  useEffect(() => {
+    if (!open) {
+      setSelectedTile(null)
+    }
+  }, [open])
 
   const handleConfirm = () => {
-    onConfirm(selectedSize, fillMap)
+    if (fillMap && !selectedTile) {
+      // Не позволяем создать карту без выбранного тайла
+      return
+    }
+    onConfirm(selectedSize, fillMap, selectedTile || undefined)
     onOpenChange(false)
   }
 
@@ -100,17 +136,30 @@ export function NewMapDialog({
 
           {fillMap && (
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Base Tile Template</Label>
+              <Label className="text-sm font-medium">Select Base Tile Template</Label>
               <div className="text-xs text-muted-foreground mb-2">
-                Select a base tile from the preview panel on the left to use as template for filling the map.
+                Choose a tile to fill the map with. The bottom level (level 0) will be filled with the selected tile.
               </div>
-              <div className="p-3 bg-muted/30 border border-dashed border-muted-foreground/30 rounded-lg text-center">
-                <div className="text-sm text-muted-foreground">
-                  Current selection will be used for filling
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  Choose a tile from the left panel before creating the map
-                </div>
+              <div className="grid grid-cols-3 gap-2 p-3 bg-muted/30 border border-dashed border-muted-foreground/30 rounded-lg">
+                {baseTiles.map((tile) => (
+                  <div
+                    key={tile.tile_id}
+                    onClick={() => setSelectedTile(tile)}
+                    className={cn(
+                      "flex flex-col items-center gap-1 p-1 rounded-xl border-2 transition-all cursor-pointer group hover:bg-muted/30",
+                      selectedTile?.tile_id === tile.tile_id
+                        ? "border-primary bg-primary/5"
+                        : "border-transparent bg-muted/10"
+                    )}
+                  >
+                    <div className="w-20 h-20">
+                      <TilePreview obj={tile.obj_path} mtl={tile.mtl_path} />
+                    </div>
+                    <div className="text-xs text-muted-foreground text-center line-clamp-2 px-1">
+                      {tile.name}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -126,9 +175,6 @@ export function NewMapDialog({
           </Button>
         </DialogFooter>
 
-        <div className="text-xs text-muted-foreground text-center border-t pt-3">
-          Press <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">Ctrl+Enter</kbd> to create quickly
-        </div>
       </DialogContent>
     </Dialog>
   )
