@@ -8,7 +8,7 @@
 
 ## Контроль Изменений (Change Control)
 
-**Last Checked Commit**: `957e20e`
+**Last Checked Commit**: `ce2f18f`
 
 **Last Checked Date**: `2025-12-29`
 
