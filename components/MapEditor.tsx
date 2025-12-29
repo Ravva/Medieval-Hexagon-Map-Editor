@@ -15,7 +15,8 @@ import {
   Compass,
   List,
   Keyboard,
-  Sparkle
+  Sparkle,
+  File
 } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -26,16 +27,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Label } from "@/components/ui/label"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { SaveMapDialog, type SaveMapData } from '@/components/SaveMapDialog'
+import { NewMapDialog } from '@/components/NewMapDialog'
+import { UnsavedDataDialog } from '@/components/UnsavedDataDialog'
 import { Hex, TERRAIN_CONFIG, TERRAIN_TYPES, type TerrainType } from '@/lib/game/Hex'
 import { Map as GameMap } from '@/lib/game/Map'
 import { MapSerializer, type BuildingData } from '@/lib/game/MapSerializer'
@@ -457,13 +461,20 @@ export default function MapEditor() {
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [selectedFolder, setSelectedFolder] = useState<string>('')
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
-  const [saveMapName, setSaveMapName] = useState('')
+  const [newMapDialogOpen, setNewMapDialogOpen] = useState(false)
+  const [unsavedDataDialogOpen, setUnsavedDataDialogOpen] = useState(false)
+  const [pendingAction, setPendingAction] = useState<'new' | 'load' | null>(null)
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false)
   const [generateMapSize, setGenerateMapSize] = useState<MapSize>('tiny')
   const [generatePrompt, setGeneratePrompt] = useState('')
   const [generateBiome, setGenerateBiome] = useState<'plains' | 'water' | 'forest' | 'mountain'>('plains')
   const [isGenerating, setIsGenerating] = useState(false)
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  // Map state tracking
+  const [mapName, setMapName] = useState<string>('')
+  const [mapPath, setMapPath] = useState<string>('')
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
   // Локальные модели для генерации
   const [useLocalModel, setUseLocalModel] = useState(false)
@@ -693,6 +704,46 @@ export default function MapEditor() {
     saveHistoryState()
   }
 
+  const handleInitializeMapWithModel = async (newMapSize: MapSize, model: { obj: string; mtl: string; name: string }) => {
+    if (!sceneRef.current) return
+
+    setLoadingText('Filling map with base tiles...')
+    setIsLoading(true)
+
+    const mapDimensions = MAP_SIZES[newMapSize]
+    const map = new GameMap(mapDimensions.width, mapDimensions.height)
+
+    // Determine terrain type based on current selection
+    let terrain: TerrainType = TERRAIN_TYPES.PLAINS
+    if (selectedFolder === 'roads') terrain = TERRAIN_TYPES.ROAD
+    else if (selectedFolder === 'coast') terrain = TERRAIN_TYPES.WATER
+    else if (selectedFolder === 'forest') terrain = TERRAIN_TYPES.FOREST
+    else if (selectedFolder === 'mountains') terrain = TERRAIN_TYPES.MOUNTAIN
+
+    // Initialize using offset coordinates, then convert to axial
+    for (let y = 0; y < mapDimensions.height; y++) {
+      for (let x = 0; x < mapDimensions.width; x++) {
+        // Convert offset to axial for initialization
+        const { q, r } = offsetToAxial(x, y)
+        const h = new Hex(q, r, terrain)
+        h.modelData = model
+        map.setHex(q, r, h)
+      }
+    }
+
+    mapRef.current = map
+    await buildMap()
+    setSelectedHexes([])
+    setIsLoading(false)
+
+    // Инициализируем историю после создания карты
+    saveHistoryState()
+    // Сбрасываем флаг изменений для новой заполненной карты
+    setHasUnsavedChanges(false)
+
+    showNotification('success', `New ${MAP_SIZES[newMapSize].label} map created and filled with ${model.name}`)
+  }
+
   const showNotification = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message })
     setTimeout(() => setNotification(null), 3000)
@@ -704,12 +755,66 @@ export default function MapEditor() {
       return
     }
 
-    // Open dialog to get map name
-    setSaveMapName(`Map ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`)
-    setSaveDialogOpen(true)
+    // Если карта уже была сохранена и есть имя, сохраняем напрямую
+    if (mapName && mapPath) {
+      handleQuickSave()
+    } else {
+      // Иначе открываем диалог сохранения
+      setSaveDialogOpen(true)
+    }
   }
 
-  const confirmSaveMap = () => {
+  const handleQuickSave = () => {
+    if (!mapRef.current || !mapName) return
+
+    try {
+      setLoadingText('Saving map...')
+      setIsLoading(true)
+
+      // Collect building data
+      const buildingData = new Map<string, { obj: string; mtl: string; name: string }>()
+      buildingObjectsRef.current.forEach((building, key) => {
+        const modelData = (building as any).userData?.modelData
+        if (modelData) {
+          buildingData.set(key, modelData)
+        }
+      })
+
+      const jsonString = MapSerializer.serialize(mapRef.current, mapSize, {
+        name: mapName,
+        description: '', // Используем пустое описание для быстрого сохранения
+        includeBuildings: buildingData.size > 0,
+        buildingData: buildingData.size > 0 ? buildingData : undefined,
+      })
+
+      // Validate before saving
+      const validation = MapSerializer.validate(JSON.parse(jsonString))
+      if (!validation.valid) {
+        throw new Error(`Validation error: ${validation.errors.join(', ')}`)
+      }
+
+      // Create download link
+      const blob = new Blob([jsonString], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = mapPath || `${mapName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      setIsLoading(false)
+      setHasUnsavedChanges(false)
+      showNotification('success', `Map "${mapName}" saved successfully`)
+    } catch (error) {
+      console.error('Failed to save map:', error)
+      setIsLoading(false)
+      showNotification('error', `Save error: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  const handleSaveMapConfirm = (saveData: SaveMapData) => {
     if (!mapRef.current) return
 
     try {
@@ -727,7 +832,8 @@ export default function MapEditor() {
       })
 
       const jsonString = MapSerializer.serialize(mapRef.current, mapSize, {
-        name: saveMapName || `Map ${new Date().toLocaleString()}`,
+        name: saveData.name,
+        description: saveData.description,
         includeBuildings: buildingData.size > 0,
         buildingData: buildingData.size > 0 ? buildingData : undefined,
       })
@@ -743,20 +849,83 @@ export default function MapEditor() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      const sanitizedName = saveMapName.replace(/[^a-z0-9]/gi, '_').toLowerCase()
-      a.download = `${sanitizedName || 'warlords-map'}-${Date.now()}.json`
+      a.download = saveData.filename
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
 
       setIsLoading(false)
-      showNotification('success', 'Map saved successfully')
-      console.log('Map saved successfully')
+
+      // Сохраняем информацию о карте
+      setMapName(saveData.name)
+      setMapPath(saveData.filename)
+      setHasUnsavedChanges(false)
+
+      showNotification('success', `Map "${saveData.name}" saved successfully`)
+      console.log('Map saved successfully:', saveData)
     } catch (error) {
       console.error('Failed to save map:', error)
       setIsLoading(false)
       showNotification('error', `Save error: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  const handleNewMap = () => {
+    // Проверяем несохраненные изменения перед открытием диалога
+    if (hasUnsavedChanges) {
+      setPendingAction('new')
+      setUnsavedDataDialogOpen(true)
+    } else {
+      // Если нет несохраненных изменений, открываем диалог напрямую
+      setNewMapDialogOpen(true)
+    }
+  }
+
+  const handleNewMapConfirm = (newMapSize: MapSize, fillMap: boolean) => {
+    // Clear the current map
+    if (mapRef.current) {
+      mapRef.current.hexes.clear()
+    }
+
+    // Clear buildings
+    buildingObjectsRef.current.clear()
+
+    // Clear selection
+    setSelectedHexes([])
+
+    // Reset history
+    historyRef.current = []
+    historyIndexRef.current = -1
+
+    // Reset map info
+    setMapName('')
+    setMapPath('')
+    setHasUnsavedChanges(false)
+
+    // Update map size if different
+    if (newMapSize !== mapSize) {
+      setMapSize(newMapSize)
+    }
+
+    // Fill map with base tiles if requested
+    if (fillMap) {
+      if (selectedModel) {
+        handleInitializeMapWithModel(newMapSize, selectedModel)
+      } else {
+        showNotification('error', 'Please select a tile from the left panel to use as template for filling')
+        // Re-render the scene
+        if (sceneRef.current && rendererRef.current && cameraRef.current) {
+          rendererRef.current.render(sceneRef.current, cameraRef.current)
+        }
+        showNotification('success', `New ${MAP_SIZES[newMapSize].label} map created`)
+      }
+    } else {
+      // Re-render the scene
+      if (sceneRef.current && rendererRef.current && cameraRef.current) {
+        rendererRef.current.render(sceneRef.current, cameraRef.current)
+      }
+      showNotification('success', `New ${MAP_SIZES[newMapSize].label} map created`)
     }
   }
 
@@ -931,6 +1100,17 @@ export default function MapEditor() {
   }
 
   const handleLoadMap = () => {
+    // Проверяем несохраненные изменения перед открытием диалога
+    if (hasUnsavedChanges) {
+      setPendingAction('load')
+      setUnsavedDataDialogOpen(true)
+    } else {
+      // Если нет несохраненных изменений, открываем диалог загрузки напрямую
+      openLoadDialog()
+    }
+  }
+
+  const openLoadDialog = () => {
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = '.json'
@@ -991,10 +1171,16 @@ export default function MapEditor() {
 
         setSelectedHexes([])
         setIsLoading(false)
+
+        // Устанавливаем информацию о карте
+        const loadedMapName = metadata?.name || file.name.replace('.json', '')
+        setMapName(loadedMapName)
+        setMapPath(file.name)
+        setHasUnsavedChanges(false)
+
         // Инициализируем историю после загрузки карты
         saveHistoryState()
-        const mapName = metadata?.name || file.name
-        showNotification('success', `Map "${mapName}" loaded successfully`)
+        showNotification('success', `Map "${loadedMapName}" loaded successfully`)
         console.log('Map loaded successfully')
       } catch (error) {
         console.error('Failed to load map:', error)
@@ -1003,6 +1189,21 @@ export default function MapEditor() {
       }
     }
     input.click()
+  }
+
+  const handleUnsavedDataSave = () => {
+    // Открываем диалог сохранения
+    handleSaveMap()
+  }
+
+  const handleUnsavedDataDiscard = () => {
+    // Выполняем отложенное действие
+    if (pendingAction === 'new') {
+      setNewMapDialogOpen(true)
+    } else if (pendingAction === 'load') {
+      openLoadDialog()
+    }
+    setPendingAction(null)
   }
 
   const buildMap = async () => {
@@ -1148,6 +1349,7 @@ export default function MapEditor() {
 
       // Всегда устанавливаем индекс на последний элемент после добавления
       historyIndexRef.current = historyRef.current.length - 1
+
       console.log('History saved, length:', historyRef.current.length, 'index:', historyIndexRef.current)
     } catch (error) {
       console.warn('Failed to save history state:', error)
@@ -1183,6 +1385,7 @@ export default function MapEditor() {
       console.log('Undo: Map deserialized, hex count:', map.hexes.size)
       await buildMap()
       setSelectedHexes([])
+
       console.log('Undo completed - Index after undo:', historyIndexRef.current, 'History length:', historyRef.current.length, 'meshes in scene:', hexMeshesRef.current.size)
       showNotification('success', 'Undone')
       return true
@@ -1226,6 +1429,7 @@ export default function MapEditor() {
       console.log('Redo: Map deserialized, hex count:', map.hexes.size)
       await buildMap()
       setSelectedHexes([])
+
       console.log('Redo completed - Index after redo:', historyIndexRef.current, 'History length:', historyRef.current.length, 'meshes in scene:', hexMeshesRef.current.size)
       showNotification('success', 'Redone')
       return true
@@ -1407,6 +1611,9 @@ export default function MapEditor() {
     // Обновляем выделение на вставленные тайлы
     setSelectedHexes(pastedHexes)
 
+    // Отмечаем изменения
+    setHasUnsavedChanges(true)
+
     // Сохраняем состояние после вставки для истории
     saveHistoryState()
 
@@ -1448,6 +1655,9 @@ export default function MapEditor() {
       sceneRef.current.remove(building)
       buildingObjectsRef.current.delete(hexKey)
     }
+
+    // Отмечаем изменения
+    setHasUnsavedChanges(true)
   }
 
   const copyHexAtPosition = async (fromQ: number, fromR: number, toQ: number, toR: number) => {
@@ -1492,6 +1702,9 @@ export default function MapEditor() {
     mapRef.current.setHex(toQ, toR, newHex)
     await updateHexMesh(toQ, toR, targetHeight)
 
+    // Отмечаем изменения
+    setHasUnsavedChanges(true)
+
     // Сохраняем состояние после копирования для истории
     saveHistoryState()
 
@@ -1532,6 +1745,9 @@ export default function MapEditor() {
     // Add hex to target
     mapRef.current.setHex(toQ, toR, newHex)
     await updateHexMesh(toQ, toR, hexHeight)
+
+    // Отмечаем изменения
+    setHasUnsavedChanges(true)
 
     // Wait for mesh to be updated in hexMeshesRef before updating selection
     // Use requestAnimationFrame to ensure mesh is rendered before updating highlight
@@ -1864,6 +2080,25 @@ export default function MapEditor() {
             // Ctrl+Z = Undo
             await undo()
           }
+          return
+        }
+
+        // File operations
+        if (e.key === 'n' || e.key === 'N') {
+          e.preventDefault()
+          handleNewMap()
+          return
+        }
+
+        if (e.key === 'o' || e.key === 'O') {
+          e.preventDefault()
+          handleLoadMap()
+          return
+        }
+
+        if (e.key === 's' || e.key === 'S') {
+          e.preventDefault()
+          handleSaveMap()
           return
         }
 
@@ -2278,59 +2513,29 @@ export default function MapEditor() {
             <Sparkle size={16} className="mr-2" />
             {isGenerating ? 'Generating...' : 'Generate Map (AI)'}
           </Button>
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant="outline"
-              className="flex-1 font-bold"
-              onClick={handleLoadMap}
-              disabled={isGenerating}
-            >
-              <FolderOpen size={16} className="mr-2" />
-              Open
-            </Button>
-            <Button
-              className="flex-1 font-bold shadow-lg shadow-primary/20"
-              onClick={handleSaveMap}
-              disabled={isGenerating}
-            >
-              <FloppyDisk size={16} className="mr-2" />
-              Save
-            </Button>
-          </div>
         </div>
 
-        {/* Save Dialog */}
-        <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Save Map</DialogTitle>
-              <DialogDescription>
-                Enter a name for your map
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
-              <Input
-                value={saveMapName}
-                onChange={(e) => setSaveMapName(e.target.value)}
-                placeholder="Map name"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    confirmSaveMap()
-                  }
-                }}
-                autoFocus
-              />
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={confirmSaveMap}>
-                Save
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Save Map Dialog */}
+        <SaveMapDialog
+          open={saveDialogOpen}
+          onOpenChange={setSaveDialogOpen}
+          onSave={handleSaveMapConfirm}
+        />
+
+        {/* New Map Dialog */}
+        <NewMapDialog
+          open={newMapDialogOpen}
+          onOpenChange={setNewMapDialogOpen}
+          onConfirm={handleNewMapConfirm}
+        />
+
+        {/* Unsaved Data Dialog */}
+        <UnsavedDataDialog
+          open={unsavedDataDialogOpen}
+          onOpenChange={setUnsavedDataDialogOpen}
+          onSave={handleUnsavedDataSave}
+          onDiscard={handleUnsavedDataDiscard}
+        />
 
         {/* Generate Map Dialog */}
         <Dialog open={generateDialogOpen} onOpenChange={setGenerateDialogOpen}>
@@ -2493,25 +2698,47 @@ export default function MapEditor() {
       </aside>
 
       <main className="flex-1 relative flex flex-col overflow-hidden bg-[#050505]" ref={containerRef}>
-        {/* TOP CENTER: CAMERA MODE */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 p-1 bg-card/80 backdrop-blur-xl border border-border/50 rounded-full flex items-center gap-3 px-4 py-2 shadow-2xl transition-all hover:bg-card/95">
-          <Compass size={18} className="text-primary animate-pulse" />
-          <span className="text-xs font-bold tracking-tight uppercase">3D PERSPECTIVE</span>
-          <Separator orientation="vertical" className="h-4 bg-border/50" />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-primary/20 text-primary transition-colors" onClick={() => { cameraDistanceRef.current = 150; cameraAngleXRef.current = Math.PI / 4; cameraAngleYRef.current = Math.PI / 4; }}>
-                <ArrowsInLineHorizontal size={16} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Reset View</TooltipContent>
-          </Tooltip>
-        </div>
+        {/* TOP LEFT: FILE MENU */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <div className="absolute top-4 left-4 z-30 p-1 bg-card/80 backdrop-blur-xl border border-border/50 rounded-full flex items-center gap-3 px-4 py-2 shadow-2xl cursor-pointer hover:bg-card/90 transition-colors">
+              <File size={18} className="text-primary" weight="bold" />
+              <span className="text-xs font-bold tracking-tight uppercase text-primary">File</span>
+            </div>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-48 bg-card/95 backdrop-blur-xl border border-border/50 shadow-2xl">
+            <div className="space-y-1">
+              <div
+                onClick={handleNewMap}
+                className="flex items-center justify-between px-2 py-2 rounded cursor-pointer hover:bg-primary/10 transition-colors"
+              >
+                <span>New...</span>
+                <span className="text-xs text-muted-foreground">Ctrl+N</span>
+              </div>
+              <Separator />
+              <div
+                onClick={handleLoadMap}
+                className="flex items-center justify-between px-2 py-2 rounded cursor-pointer hover:bg-primary/10 transition-colors"
+              >
+                <span>Open...</span>
+                <span className="text-xs text-muted-foreground">Ctrl+O</span>
+              </div>
+              <div
+                onClick={handleSaveMap}
+                className="flex items-center justify-between px-2 py-2 rounded cursor-pointer hover:bg-primary/10 transition-colors"
+              >
+                <span>Save...</span>
+                <span className="text-xs text-muted-foreground">Ctrl+S</span>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
 
-        {/* TOP LEFT: GRID INFO */}
-        <div className="absolute top-4 left-4 z-30 p-1 bg-card/80 backdrop-blur-xl border border-border/50 rounded-full flex items-center gap-3 px-4 py-2 shadow-2xl">
-          <MapTrifold size={18} className="text-primary" weight="bold" />
-          <span className="text-xs font-bold tracking-tight uppercase">GRID: {MAP_SIZES[mapSize].width}×{MAP_SIZES[mapSize].height}</span>
+        {/* TOP CENTER: MAP NAME */}
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 p-1 bg-card/80 backdrop-blur-xl border border-border/50 rounded-full flex items-center gap-2 px-4 py-2 shadow-2xl">
+          <span className="text-xs font-bold tracking-tight uppercase text-primary">
+            {mapName ? `${mapName}${hasUnsavedChanges ? '*' : ''}` : 'Not saved...'}
+          </span>
         </div>
 
         {/* TOP RIGHT: CURRENT SELECTION FROM PREVIEW */}
@@ -2523,7 +2750,7 @@ export default function MapEditor() {
               <span className="text-xs font-bold tracking-tight uppercase">{selectedModel.name}</span>
             </div>
             <div className="w-8 h-8 overflow-visible ml-1 flex items-center justify-center">
-              <div style={{ transform: 'scale(2)' }}>
+              <div style={{ transform: 'scale(2.5)' }}>
                 <ModelPreview obj={selectedModel.obj} mtl={selectedModel.mtl} />
               </div>
             </div>
@@ -2559,9 +2786,15 @@ export default function MapEditor() {
           </Button>
         </div>
 
+        {/* BOTTOM LEFT: GRID INFO */}
+        <div className="absolute bottom-24 left-6 z-30 p-1 bg-card/80 backdrop-blur-xl border border-border/50 rounded-full flex items-center gap-3 px-4 py-2 shadow-2xl">
+          <MapTrifold size={18} className="text-primary" weight="bold" />
+          <span className="text-xs font-bold tracking-tight uppercase">GRID: {MAP_SIZES[mapSize].width}×{MAP_SIZES[mapSize].height}</span>
+        </div>
+
         {/* BOTTOM LEFT: SELECTION INFO */}
         {selectedHexes.length > 0 && mapRef.current?.getHex(selectedHexes[0].q, selectedHexes[0].r) && (
-          <div className="absolute bottom-6 left-6 z-30 p-1 bg-card/80 backdrop-blur-xl border border-border/50 rounded-full flex items-center gap-4 px-6 py-3 shadow-2xl pointer-events-auto animate-in fade-in slide-in-from-left-4 duration-300">
+          <div className="absolute bottom-6 left-6 z-30 p-1 bg-card/80 backdrop-blur-xl border border-border/50 rounded-full flex items-center gap-4 pl-6 pr-2 py-3 shadow-2xl pointer-events-auto animate-in fade-in slide-in-from-left-4 duration-300 overflow-visible">
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                 {selectedHexes.length > 1 ? 'Selected' : 'Hex'}
@@ -2584,15 +2817,44 @@ export default function MapEditor() {
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Type</span>
                   <span className="text-xs font-bold text-primary tracking-tight uppercase">{mapRef.current.getHex(selectedHexes[0].q, selectedHexes[0].r)?.modelData?.name || mapRef.current.getHex(selectedHexes[0].q, selectedHexes[0].r)?.terrain || 'Standard'}</span>
                 </div>
+                {/* Tile Preview */}
+                {(() => {
+                  const selectedHex = mapRef.current.getHex(selectedHexes[0].q, selectedHexes[0].r)
+                  if (selectedHex?.modelData) {
+                    return (
+                      <div className="w-8 h-8 overflow-visible ml-1 flex items-center justify-center">
+                        <div style={{ transform: 'scale(2.5)' }}>
+                          <ModelPreview obj={selectedHex.modelData.obj} mtl={selectedHex.modelData.mtl} />
+                        </div>
+                      </div>
+                    )
+                  }
+                  return null
+                })()}
               </>
             )}
           </div>
         )}
 
+        {/* BOTTOM CENTER: CAMERA MODE */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 p-1 bg-card/80 backdrop-blur-xl border border-border/50 rounded-full flex items-center gap-3 px-4 py-2 shadow-2xl transition-all hover:bg-card/95">
+          <Compass size={18} className="text-primary animate-pulse" />
+          <span className="text-xs font-bold tracking-tight uppercase">3D PERSPECTIVE</span>
+          <Separator orientation="vertical" className="h-4 bg-border/50" />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-primary/20 text-primary transition-colors" onClick={() => { cameraDistanceRef.current = 150; cameraAngleXRef.current = Math.PI / 4; cameraAngleYRef.current = Math.PI / 4; }}>
+                <ArrowsInLineHorizontal size={16} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Reset View</TooltipContent>
+          </Tooltip>
+        </div>
+
         {/* BOTTOM RIGHT: CONTROLS */}
         <Popover>
           <PopoverTrigger asChild>
-            <div className="absolute bottom-6 right-6 z-30 p-1 bg-card/80 backdrop-blur-xl border border-border/50 rounded-full flex items-center gap-3 pl-4 pr-2 py-1.5 shadow-2xl pointer-events-auto cursor-pointer hover:bg-card/90 transition-colors">
+            <div className="absolute bottom-6 right-6 z-30 p-1 bg-card/80 backdrop-blur-xl border border-border/50 rounded-full flex items-center gap-4 pl-6 pr-6 py-3 shadow-2xl pointer-events-auto cursor-pointer hover:bg-card/90 transition-colors">
               <Keyboard size={18} className="text-primary" weight="bold" />
               <span className="text-xs font-bold tracking-tight uppercase text-primary">Controls</span>
             </div>
@@ -2731,6 +2993,8 @@ export default function MapEditor() {
                     h.height = targetLevel
                     mapRef.current.setHex(q, r, h)
                     await updateHexMesh(q, r, targetLevel)
+                    // Отмечаем изменения
+                    setHasUnsavedChanges(true)
                   }
                 } else {
                   // For buildings, same logic
@@ -2745,6 +3009,8 @@ export default function MapEditor() {
                     h.height = targetLevel
                     mapRef.current.setHex(q, r, h)
                     await updateHexMesh(q, r, targetLevel)
+                    // Отмечаем изменения
+                    setHasUnsavedChanges(true)
                   }
                 }
               }

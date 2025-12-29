@@ -110,7 +110,93 @@ const undo = async () => {
 
 **Реализация**: `Hex` класс создается с координатами (q, r) и типом местности
 
-### Паттерн 5: Singleton Pattern для ModelLoader
+### Паттерн 5: File System Integration Pattern
+
+**Описание**: Интеграция с системными диалогами файловой системы для улучшенного UX
+
+**Реализация**:
+- Использование File System Access API для современных браузеров
+- Fallback на webkitdirectory для совместимости
+- TypeScript декларации для расширения Window API
+
+**Пример**:
+```typescript
+// Расширение Window для File System Access API
+declare global {
+  interface Window {
+    showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle>
+  }
+}
+
+const handleFolderSelect = async () => {
+  try {
+    if (window.showDirectoryPicker) {
+      const dirHandle = await window.showDirectoryPicker()
+      setSelectedFolder(dirHandle.name)
+    } else {
+      // Fallback для старых браузеров
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.webkitdirectory = true
+      input.click()
+    }
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name !== 'AbortError') {
+      console.error('Error selecting folder:', err)
+    }
+  }
+}
+```
+
+**Поддержка браузеров**:
+- File System Access API: Chrome 86+, Edge 86+
+- Fallback (webkitdirectory): Firefox, Safari и старые браузеры
+
+### Паттерн 6: Modal Dialog Pattern для SaveMapDialog
+
+**Описание**: Модальное окно для сохранения карт с системным диалогом выбора папки
+
+**Реализация**:
+- Компонент `SaveMapDialog` использует Shadcn/ui Dialog
+- Интеграция с File System Access API для выбора папки
+- Fallback на webkitdirectory для совместимости
+- TypeScript интерфейс `SaveMapData` для типизации
+
+**Как использовать**:
+```typescript
+interface SaveMapData {
+  name: string        // Название карты
+  description: string // Описание карты
+  folder: string      // Выбранная папка или 'Downloads'
+  filename: string    // Сгенерированное имя файла
+}
+
+const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+
+const handleSave = (saveData: SaveMapData) => {
+  // Сохранение через MapSerializer
+  const jsonString = MapSerializer.serialize(map, mapSize, {
+    name: saveData.name,
+    description: saveData.description
+  })
+  // Создание и скачивание файла
+}
+
+<SaveMapDialog
+  open={saveDialogOpen}
+  onOpenChange={setSaveDialogOpen}
+  onSave={handleSave}
+/>
+```
+
+**Особенности**:
+- Системный диалог выбора папки через `window.showDirectoryPicker()`
+- Graceful fallback для браузеров без поддержки File System Access API
+- Автоматическая санитизация имени файла
+- Валидация обязательных полей
+- Горячие клавиши (Ctrl+Enter)
+
+### Паттерн 7: Singleton Pattern для ModelLoader
 
 **Описание**: Единственный экземпляр ModelLoader для кеширования моделей
 
@@ -311,3 +397,36 @@ requestAnimationFrame(() => {
 - Небольшие, атомарные изменения
 - Тесты проходят перед коммитом
 
+### Паттерн 8: Visual Feedback Pattern
+
+**Описание**: Визуальная обратная связь для улучшения понимания пользователем текущего состояния
+
+**Реализация**:
+- Отображение превью моделей в UI метках для визуальной связи
+- Использование одинакового компонента ModelPreview в разных контекстах
+- Условное отображение превью только при наличии данных модели
+
+**Пример**:
+```typescript
+// Превью в метке выделения с оптимальным масштабом
+{(() => {
+  const selectedHex = mapRef.current.getHex(selectedHexes[0].q, selectedHexes[0].r)
+  if (selectedHex?.modelData) {
+    return (
+      <div className="w-8 h-8 overflow-visible ml-1 flex items-center justify-center">
+        <div style={{ transform: 'scale(2.5)' }}>
+          <ModelPreview obj={selectedHex.modelData.obj} mtl={selectedHex.modelData.mtl} />
+        </div>
+      </div>
+    )
+  }
+  return null
+})()}
+```
+
+**Принципы визуальной обратной связи**:
+- **Консистентность**: Одинаковый стиль превью в разных местах интерфейса
+- **Контекстность**: Превью показывается только когда это релевантно
+- **Масштабирование**: Использование transform: scale() для подгонки размера (2.5x для выделения, 2x для размещения)
+- **Overflow handling**: overflow-visible для корректного отображения, но без перекрытия текста
+- **Баланс размера**: Превью должно быть заметным, но не мешать чтению информации

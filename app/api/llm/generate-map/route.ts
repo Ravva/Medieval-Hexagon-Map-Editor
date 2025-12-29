@@ -382,13 +382,13 @@ REMEMBER: ALL tiles at height 0! Decorations/buildings go on top of base tiles a
 
       if (matches && matches.length > 0) {
         // Берем все найденные hex объекты
-        const validHexes = matches.map(m => {
+        const validHexes = matches.map((m: string) => {
           try {
             return JSON.parse(m)
           } catch {
             return null
           }
-        }).filter(h => h !== null) as GeneratedHex[]
+        }).filter((h: any) => h !== null) as GeneratedHex[]
 
         if (validHexes.length > 0) {
           console.log(`[generate-map] Extracted ${validHexes.length} valid hexes from truncated JSON`)
@@ -435,13 +435,13 @@ REMEMBER: ALL tiles at height 0! Decorations/buildings go on top of base tiles a
         const hexMatches = arrayContent.match(hexPattern)
 
         if (hexMatches) {
-          const hexes = hexMatches.map(m => {
+          const hexes = hexMatches.map((m: string) => {
             try {
               return JSON.parse(m)
             } catch {
               return null
             }
-          }).filter(h => h !== null) as GeneratedHex[]
+          }).filter((h: any) => h !== null) as GeneratedHex[]
 
           if (hexes.length > 0) {
             console.log(`[generate-map] Extracted ${hexes.length} hexes using regex fallback`)
