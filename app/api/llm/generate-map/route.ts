@@ -327,13 +327,55 @@ async function generateMapWithLocalModelStreaming(params: {
   onProgress('Prompt processing progress: 10%')
   onProgress('Analyzing river connection requirements...')
 
+  // Load tile registry
+  onProgress('Loading tile registry...')
+  const registryPath = path.join(process.cwd(), 'lib', 'llm', 'tile-registry.json')
+  if (!fs.existsSync(registryPath)) {
+    throw new Error(
+      `Tile registry not found at ${registryPath}. Run "bun run generate-registry" first.`
+    )
+  }
+  const registryContent = fs.readFileSync(registryPath, 'utf-8')
+  const tileRegistry = JSON.parse(registryContent) as { tiles: TileDescriptor[] }
+
+  // Compact tile registry (only include essential fields to reduce token count)
+  const compactTiles = tileRegistry.tiles.map((tile) => {
+    const compact: {
+      tile_id: string
+      biome: string
+      category: string
+      walkable: boolean
+      tags: string[]
+      connections?: Record<string, boolean>
+    } = {
+      tile_id: tile.tile_id,
+      biome: tile.biome,
+      category: tile.category,
+      walkable: tile.walkable,
+      tags: tile.tags,
+    }
+
+    // Include connections information for tiles that need connections
+    if (tile.connections && Object.values(tile.connections).some(Boolean)) {
+      compact.connections = tile.connections
+    }
+
+    return compact
+  })
+
   // Use PromptManager for unified prompt generation
-  const { systemMessage: unifiedSystemMessage, userPrompt } = promptManager.getPrompts({
+  const { systemMessage: unifiedSystemMessage, userPrompt: baseUserPrompt } = promptManager.getPrompts({
     width,
     height,
     prompt: prompt || 'Generate a fantasy map',
     biome: biome || 'plains'
   })
+
+  // Add tile registry to the user prompt
+  const userPrompt = `${baseUserPrompt}
+
+TILE REGISTRY (use tile_id values from here - DO NOT use placeholder IDs like "plain_base", "river_straight", etc.):
+${JSON.stringify(compactTiles, null, 2)}`
 
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 600000)
@@ -420,13 +462,54 @@ async function generateMapWithLocalModel(params: {
 }): Promise<GeneratedHex[]> {
   const { width, height, prompt, biome, localUrl, model } = params
 
+  // Load tile registry
+  const registryPath = path.join(process.cwd(), 'lib', 'llm', 'tile-registry.json')
+  if (!fs.existsSync(registryPath)) {
+    throw new Error(
+      `Tile registry not found at ${registryPath}. Run "bun run generate-registry" first.`
+    )
+  }
+  const registryContent = fs.readFileSync(registryPath, 'utf-8')
+  const tileRegistry = JSON.parse(registryContent) as { tiles: TileDescriptor[] }
+
+  // Compact tile registry (only include essential fields to reduce token count)
+  const compactTiles = tileRegistry.tiles.map((tile) => {
+    const compact: {
+      tile_id: string
+      biome: string
+      category: string
+      walkable: boolean
+      tags: string[]
+      connections?: Record<string, boolean>
+    } = {
+      tile_id: tile.tile_id,
+      biome: tile.biome,
+      category: tile.category,
+      walkable: tile.walkable,
+      tags: tile.tags,
+    }
+
+    // Include connections information for tiles that need connections
+    if (tile.connections && Object.values(tile.connections).some(Boolean)) {
+      compact.connections = tile.connections
+    }
+
+    return compact
+  })
+
   // Use PromptManager for unified prompt generation
-  const { systemMessage: unifiedSystemMessage, userPrompt } = promptManager.getPrompts({
+  const { systemMessage: unifiedSystemMessage, userPrompt: baseUserPrompt } = promptManager.getPrompts({
     width,
     height,
     prompt: prompt || 'Generate a fantasy map',
     biome: biome || 'plains'
   })
+
+  // Add tile registry to the user prompt
+  const userPrompt = `${baseUserPrompt}
+
+TILE REGISTRY (use tile_id values from here - DO NOT use placeholder IDs like "plain_base", "river_straight", etc.):
+${JSON.stringify(compactTiles, null, 2)}`
 
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 600000)

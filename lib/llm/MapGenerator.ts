@@ -138,10 +138,12 @@ export class MapGenerator {
     // Add tile registry to the prompt
     const promptText = `${systemMessage}
 
-TILE REGISTRY (use tile_id values from here):
+TILE REGISTRY (use tile_id values from here - DO NOT use placeholder IDs like "plain_base", "river_straight", etc.):
 ${JSON.stringify(compactTiles, null, 2)}
 
-${baseUserPrompt}`
+${baseUserPrompt}
+
+CRITICAL REMINDER: You MUST use ONLY tile_id values from the TILE REGISTRY above. NEVER use placeholder IDs like "plain_base", "river_straight", "forest_decoration", "house", etc. Look up the exact tile_id from the registry that matches your needs.`
 
     return promptText
   }
@@ -260,6 +262,43 @@ ${baseUserPrompt}`
       }
     }
 
+    // Post-process: Fill missing positions in rectangular grid
+    const existingPositions = new Set<string>()
+    for (const hex of generatedHexes) {
+      const key = `${hex.q},${hex.r}`
+      existingPositions.add(key)
+    }
+
+    // Find default plains/base tile
+    const defaultPlainsTile = tileRegistry.tiles.find(
+      (t) => t.tile_id === 'tiles_base_hex_grass' || (t.biome === 'plains' && (t.category === 'tiles' || t.category === 'base'))
+    ) || tileRegistry.tiles.find((t) => t.biome === 'plains')
+
+    // Fill all missing positions in rectangular grid
+    let filledCount = 0
+    for (let r = 0; r < height; r++) {
+      for (let q = 0; q < width; q++) {
+        const key = `${q},${r}`
+        if (!existingPositions.has(key)) {
+          // Add base tile for missing position
+          const baseHex: GeneratedHex = {
+            q,
+            r,
+            tile_id: defaultPlainsTile?.tile_id || 'tiles_base_hex_grass',
+            rotation: 0,
+            height: 0,
+          }
+          generatedHexes.push(baseHex)
+          existingPositions.add(key)
+          filledCount++
+        }
+      }
+    }
+
+    if (filledCount > 0) {
+      console.log(`Filled ${filledCount} missing positions in rectangular grid`)
+    }
+
     // Post-process: Ensure base tiles exist for all elevated hexes
     const baseTiles = new Set<string>() // Track positions with base tiles at height 0
     const elevatedHexes: GeneratedHex[] = []
@@ -273,10 +312,7 @@ ${baseUserPrompt}`
       }
     }
 
-    // Add missing base tiles for elevated hexes
-    const defaultPlainsTile = tileRegistry.tiles.find(
-      (t) => t.tile_id === 'tiles_base_hex_grass' || (t.biome === 'plains' && (t.category === 'tiles' || t.category === 'base'))
-    ) || tileRegistry.tiles.find((t) => t.biome === 'plains')
+    // Add missing base tiles for elevated hexes (reuse defaultPlainsTile found above)
 
     for (const elevatedHex of elevatedHexes) {
       const key = `${elevatedHex.q},${elevatedHex.r}`
@@ -296,10 +332,227 @@ ${baseUserPrompt}`
       }
     }
 
+    // Auto-correct rotations for river/road tiles (multiple iterations for better results)
+    for (let iteration = 0; iteration < 3; iteration++) {
+      const corrected = this.autoCorrectRotations(generatedHexes, tileRegistry)
+      if (corrected === 0) break // No more corrections needed
+    }
+
     // Validate connectivity for rivers and roads
     this.validateConnectivity(generatedHexes, tileRegistry)
 
     return generatedHexes
+  }
+
+  /**
+   * Automatically calculate and apply correct rotations for river/road tiles
+   * based on their neighbors' connections
+   * Returns number of tiles corrected
+   */
+  private autoCorrectRotations(
+    generatedHexes: GeneratedHex[],
+    tileRegistry: TileRegistry
+  ): number {
+    // Build map of all hexes by position (need to check all heights, not just topmost)
+    const hexesByPosition = new Map<string, GeneratedHex[]>()
+    for (const hex of generatedHexes) {
+      const key = `${hex.q},${hex.r}`
+      if (!hexesByPosition.has(key)) {
+        hexesByPosition.set(key, [])
+      }
+      hexesByPosition.get(key)!.push(hex)
+    }
+
+    // Helper to get river/road tile at position (prefer height 0, but check all)
+    const getRiverRoadTileAt = (q: number, r: number): GeneratedHex | null => {
+      const key = `${q},${r}`
+      const hexes = hexesByPosition.get(key) || []
+      // Prefer height 0 for rivers/roads
+      for (const hex of hexes) {
+        if (hex.height === 0) {
+          const tile = tileRegistry.tiles.find((t) => t.tile_id === hex.tile_id)
+          if (tile?.connections) {
+            const hasRiverOrRoad = Object.values(tile.connections).some(
+              (conn) => conn === 'river' || conn === 'road'
+            )
+            if (hasRiverOrRoad) return hex
+          }
+        }
+      }
+      // If no height 0, check other heights
+      for (const hex of hexes) {
+        const tile = tileRegistry.tiles.find((t) => t.tile_id === hex.tile_id)
+        if (tile?.connections) {
+          const hasRiverOrRoad = Object.values(tile.connections).some(
+            (conn) => conn === 'river' || conn === 'road'
+          )
+          if (hasRiverOrRoad) return hex
+        }
+      }
+      return null
+    }
+
+    const oppositeDirections: Record<string, string> = {
+      east: 'west',
+      west: 'east',
+      northeast: 'southwest',
+      southwest: 'northeast',
+      northwest: 'southeast',
+      southeast: 'northwest',
+    }
+
+    // Direction order for rotation (clockwise)
+    const directionOrder = ['east', 'southeast', 'southwest', 'west', 'northwest', 'northeast']
+
+    /**
+     * Get rotated direction after applying rotation
+     * Rotation is in degrees: 0, 60, 120, 180, 240, 300
+     */
+    const getRotatedDirection = (originalDir: string, rotationDeg: number): string => {
+      const steps = rotationDeg / 60
+      const index = directionOrder.indexOf(originalDir)
+      if (index === -1) return originalDir
+      const newIndex = (index + steps) % 6
+      return directionOrder[newIndex]
+    }
+
+    let correctedCount = 0
+    let riverRoadTilesCount = 0
+    let tilesWithNeighborsCount = 0
+
+    for (const hex of generatedHexes) {
+      const tileDescriptor = tileRegistry.tiles.find((t) => t.tile_id === hex.tile_id)
+      if (!tileDescriptor || !tileDescriptor.connections) {
+        continue // Not a tile with connections
+      }
+
+      // Check if this tile has river or road connections
+      const connectionType = Object.values(tileDescriptor.connections).find(
+        (conn) => conn === 'river' || conn === 'road'
+      )
+      if (!connectionType) {
+        continue // Not a river/road tile
+      }
+
+      riverRoadTilesCount++
+
+      // Get neighbors
+      const neighborCoords = getAxialNeighbors(hex.q, hex.r)
+      const directionMap: Record<string, { q: number; r: number }> = {
+        east: neighborCoords[0],
+        northeast: neighborCoords[1],
+        northwest: neighborCoords[2],
+        west: neighborCoords[3],
+        southwest: neighborCoords[4],
+        southeast: neighborCoords[5],
+      }
+
+      // Determine required connection directions and types based on neighbors
+      // Map: direction -> required connection type
+      const requiredConnections = new Map<string, string>()
+
+      for (const [direction, neighborCoord] of Object.entries(directionMap)) {
+        const neighborHex = getRiverRoadTileAt(neighborCoord.q, neighborCoord.r)
+        if (!neighborHex) continue
+
+        const neighborTile = tileRegistry.tiles.find((t) => t.tile_id === neighborHex.tile_id)
+        if (!neighborTile || !neighborTile.connections) continue
+
+        // Check what connection type neighbor has in opposite direction (after its rotation)
+        const oppositeDir = oppositeDirections[direction]
+        const neighborRotation = neighborHex.rotation || 0
+
+        // Find original direction in neighbor's connections that maps to oppositeDir after rotation
+        for (const [originalDir, connType] of Object.entries(neighborTile.connections)) {
+          const rotatedDir = getRotatedDirection(originalDir, neighborRotation)
+          if (rotatedDir === oppositeDir && (connType === 'river' || connType === 'road')) {
+            // Neighbor has this connection type in opposite direction
+            // So we need the same connection type in our direction
+            requiredConnections.set(direction, connType)
+            break
+          }
+        }
+      }
+
+      if (requiredConnections.size === 0) {
+        // No neighbors with matching connections - this might be an edge tile or isolated segment
+        if (correctedCount < 3) {
+          console.log(
+            `Tile ${hex.tile_id} at (${hex.q},${hex.r}) has no neighbors with ${connectionType} connections`
+          )
+        }
+        continue // Keep original rotation
+      }
+
+      tilesWithNeighborsCount++
+
+      // Find best rotation that matches required connections
+      let bestRotation = hex.rotation
+      let bestMatch = 0
+      let bestRequiredMatch = 0
+
+      for (const rotation of [0, 60, 120, 180, 240, 300]) {
+        let matchCount = 0
+        let requiredMatchCount = 0
+
+        // Check how many required connections match after this rotation
+        for (const [reqDir, reqType] of requiredConnections.entries()) {
+          // Find which original direction in our tile maps to reqDir after rotation
+          for (const [originalDir, connType] of Object.entries(tileDescriptor.connections)) {
+            const rotatedDir = getRotatedDirection(originalDir, rotation)
+            if (rotatedDir === reqDir) {
+              // Check if connection type matches
+              if (connType === reqType) {
+                matchCount++
+                requiredMatchCount++
+                break
+              } else if (connType === 'river' || connType === 'road') {
+                // Wrong type but at least has a connection
+                matchCount++
+                break
+              }
+            }
+          }
+        }
+
+        // Prefer rotations that match both direction AND type
+        if (requiredMatchCount > bestRequiredMatch ||
+            (requiredMatchCount === bestRequiredMatch && matchCount > bestMatch)) {
+          bestMatch = matchCount
+          bestRequiredMatch = requiredMatchCount
+          bestRotation = rotation
+        }
+      }
+
+      // Apply best rotation if it's better than current
+      if (bestMatch > 0 && bestRotation !== hex.rotation) {
+        const oldRotation = hex.rotation
+        hex.rotation = bestRotation
+        correctedCount++
+        if (correctedCount <= 10) {
+          // Log first few corrections for debugging
+          const reqDirs = Array.from(requiredConnections.keys()).join(', ')
+          console.log(
+            `[Rotation Correction] Tile ${hex.tile_id} at (${hex.q},${hex.r}): ${oldRotation}° -> ${bestRotation}° | Matched: ${bestRequiredMatch}/${requiredConnections.size} (${reqDirs}) | Type: ${connectionType}`
+          )
+        }
+      } else if (bestMatch === 0 && correctedCount < 3) {
+        // Log if we couldn't find any matching rotation
+        const reqDirs = Array.from(requiredConnections.keys()).join(', ')
+        const tileDirs = Object.keys(tileDescriptor.connections)
+          .filter((dir) => tileDescriptor.connections[dir as keyof typeof tileDescriptor.connections] === connectionType)
+          .join(', ')
+        console.warn(
+          `[Rotation Correction FAILED] Tile ${hex.tile_id} at (${hex.q},${hex.r}): Could not match required directions [${reqDirs}] with tile connections [${tileDirs}]`
+        )
+      }
+    }
+
+    console.log(
+      `[Rotation Correction Summary] Total river/road tiles: ${riverRoadTilesCount}, Tiles with neighbors: ${tilesWithNeighborsCount}, Corrected: ${correctedCount}`
+    )
+
+    return correctedCount
   }
 
   /**

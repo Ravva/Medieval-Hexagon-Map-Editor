@@ -143,22 +143,45 @@ export function GenerateMapDialog({
       } catch (fetchError: any) {
         clearTimeout(timeoutId)
         if (fetchError.name === 'AbortError') {
-          throw new Error('Connection timeout: Local server did not respond within 10 seconds')
+          throw new Error('Connection timeout: Local server did not respond within 10 seconds. Please check if the server is running.')
         }
         throw fetchError
       }
     } catch (err: any) {
-      const errorMessage = err instanceof Error
-        ? err.message
-        : 'Local server is unavailable. Please check if the server is running and the URL is correct.'
+      // Handle network errors more gracefully
+      let errorMessage = 'Local server is unavailable. Please check if the server is running and the URL is correct.'
+
+      if (err instanceof Error) {
+        const errorMsg = err.message.toLowerCase()
+
+        // Check for specific network errors
+        if (errorMsg.includes('failed to fetch') ||
+            errorMsg.includes('networkerror') ||
+            errorMsg.includes('connection refused') ||
+            errorMsg.includes('err_connection_refused') ||
+            errorMsg.includes('net::err_connection_refused')) {
+          errorMessage = `Cannot connect to local server at ${localModelUrl}. Please ensure:\n\n1. The local LLM server is running\n2. The URL is correct (${localModelUrl})\n3. The server is accessible from your browser`
+        } else if (errorMsg.includes('timeout') || errorMsg.includes('aborted')) {
+          errorMessage = 'Connection timeout: The local server did not respond. Please check if the server is running and try again.'
+        } else if (errorMsg.includes('cors')) {
+          errorMessage = 'CORS error: The local server may not allow requests from this origin. Please check server CORS settings.'
+        } else {
+          // Use the original error message if it's informative
+          errorMessage = err.message
+        }
+      }
 
       // Show error via callback if provided
       if (onError) {
         onError(errorMessage)
       }
 
-      // Also log to console
-      console.error('Failed to load local models:', err)
+      // Log to console with more context (but don't show raw error to user)
+      console.warn('Failed to load local models:', {
+        url: `${localModelUrl}/v1/models`,
+        error: err instanceof Error ? err.message : String(err),
+        suggestion: 'Make sure your local LLM server (e.g., Ollama, LM Studio) is running and accessible'
+      })
 
       // Clear models on error
       setLocalModels([])

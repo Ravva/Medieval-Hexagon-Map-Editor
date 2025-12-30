@@ -2331,13 +2331,13 @@ export default function MapEditor() {
             ? "bg-green-500/90 border-green-400/50 text-white"
             : "bg-red-500/90 border-red-400/50 text-white"
         )}>
-          <div className="flex items-center gap-2">
+          <div className="flex items-start gap-2">
             {notification.type === 'success' ? (
-              <FloppyDisk size={20} weight="fill" />
+              <FloppyDisk size={20} weight="fill" className="mt-0.5 flex-shrink-0" />
             ) : (
-              <Trash size={20} weight="fill" />
+              <Trash size={20} weight="fill" className="mt-0.5 flex-shrink-0" />
             )}
-            <span className="font-bold text-sm">{notification.message}</span>
+            <div className="font-bold text-sm whitespace-pre-line">{notification.message}</div>
           </div>
         </div>
       )}
