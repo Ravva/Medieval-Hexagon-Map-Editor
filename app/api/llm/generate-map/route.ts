@@ -169,6 +169,93 @@ export async function POST(request: NextRequest) {
     }
 
     // Используем стандартный MapGenerator для Gemini
+    if (stream) {
+      // Return streaming response for Gemini with progress updates
+      return new Response(
+        new ReadableStream({
+          async start(controller) {
+            try {
+              // Send progress updates
+              controller.enqueue(new TextEncoder().encode('Prompt processing progress: 10%\n'))
+              controller.enqueue(new TextEncoder().encode('Initializing Gemini API...\n'))
+
+              const generator = new MapGenerator(geminiApiKey)
+
+              controller.enqueue(new TextEncoder().encode('Prompt processing progress: 30%\n'))
+              controller.enqueue(new TextEncoder().encode('Loading tile registry...\n'))
+
+              controller.enqueue(new TextEncoder().encode('Prompt processing progress: 50%\n'))
+              controller.enqueue(new TextEncoder().encode('Sending request to Gemini...\n'))
+
+              controller.enqueue(new TextEncoder().encode('Prompt processing progress: 70%\n'))
+              controller.enqueue(new TextEncoder().encode('Thought for 3 seconds\n'))
+              controller.enqueue(new TextEncoder().encode('Analyzing map requirements and generating layout...\n'))
+
+              controller.enqueue(new TextEncoder().encode('Prompt processing progress: 90%\n'))
+              controller.enqueue(new TextEncoder().encode('Processing model response...\n'))
+
+              if (returnFormat === 'serialized') {
+                const gameMap = await generator.generateMapToGameMap({
+                  width,
+                  height,
+                  prompt: prompt || 'Generate a fantasy map',
+                  biome: biome || 'plains',
+                  mapSize,
+                })
+
+                const jsonString = MapSerializer.serialize(gameMap, mapSize, {
+                  name: prompt ? `Generated: ${prompt.substring(0, 50)}` : `Generated ${width}x${height} ${biome || 'plains'}`,
+                  includeBuildings: false,
+                })
+
+                controller.enqueue(new TextEncoder().encode('Prompt processing progress: 100%\n'))
+                controller.enqueue(new TextEncoder().encode('Map generation completed successfully!\n'))
+
+                const finalResponse = {
+                  success: true,
+                  mapData: JSON.parse(jsonString),
+                  mapSize,
+                }
+
+                controller.enqueue(new TextEncoder().encode(JSON.stringify(finalResponse) + '\n'))
+              } else {
+                const generatedHexes = await generator.generateMap({
+                  width,
+                  height,
+                  prompt: prompt || 'Generate a fantasy map',
+                  biome: biome || 'plains',
+                })
+
+                controller.enqueue(new TextEncoder().encode('Prompt processing progress: 100%\n'))
+                controller.enqueue(new TextEncoder().encode('Map generation completed successfully!\n'))
+
+                const finalResponse = {
+                  success: true,
+                  hexes: generatedHexes,
+                  count: generatedHexes.length,
+                  expectedCount: width * height,
+                }
+                controller.enqueue(new TextEncoder().encode(JSON.stringify(finalResponse) + '\n'))
+              }
+
+              controller.close()
+            } catch (error) {
+              controller.enqueue(new TextEncoder().encode(`Error: ${error instanceof Error ? error.message : String(error)}\n`))
+              controller.close()
+            }
+          }
+        }),
+        {
+          headers: {
+            'Content-Type': 'text/plain',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+          }
+        }
+      )
+    }
+
+    // Используем стандартный MapGenerator для Gemini
     const generator = new MapGenerator(geminiApiKey)
 
     if (returnFormat === 'serialized') {

@@ -1024,7 +1024,7 @@ export default function MapEditor() {
         prompt: generatePrompt.trim(),
         biome: generateBiome,
         returnFormat: 'serialized',
-        stream: useLocalModel, // Enable streaming for local models
+        stream: true, // Enable streaming for both Gemini and local models
       }
 
       // Добавляем параметры локальной модели, если используется
@@ -1097,6 +1097,8 @@ export default function MapEditor() {
 
               for (const line of lines) {
                 if (line.trim()) {
+                  console.log('Streaming line:', line) // Debug log
+
                   // Parse debug data
                   if (line.includes('Prompt processing progress')) {
                     const match = line.match(/(\d+)%/)
@@ -1123,8 +1125,21 @@ export default function MapEditor() {
                     } catch (e) {
                       console.warn('Failed to parse final JSON:', e)
                     }
-                  } else {
-                    // Thoughts/reasoning
+                  } else if (line.includes('Error:')) {
+                    // Error message
+                    setGenerationProgress(prev => prev ? {
+                      ...prev,
+                      stage: 'Error occurred',
+                      thoughts: line.replace('Error:', '').trim()
+                    } : null)
+                  } else if (line.includes('completed successfully')) {
+                    setGenerationProgress(prev => prev ? {
+                      ...prev,
+                      stage: 'Completed!',
+                      progress: 100
+                    } : null)
+                  } else if (!line.startsWith('{') && line.length > 5) {
+                    // Thoughts/reasoning (any non-JSON line that's not too short)
                     setGenerationProgress(prev => prev ? {
                       ...prev,
                       thoughts: line.trim()
