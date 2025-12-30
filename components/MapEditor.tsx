@@ -1118,12 +1118,24 @@ export default function MapEditor() {
                         progress: Math.min(prev.progress + 10, 90)
                       } : null)
                     }
-                  } else if (line.startsWith('{') && line.includes('success')) {
-                    // Final JSON response
+                  } else if (line.trim().startsWith('{') || (line.includes('success') && (line.includes('mapData') || line.includes('hexes')))) {
+                    // Final JSON response (more flexible detection)
                     try {
-                      finalData = JSON.parse(line)
+                      const jsonLine = line.trim()
+                      finalData = JSON.parse(jsonLine)
+                      console.log('Parsed final JSON:', finalData) // Debug log
                     } catch (e) {
-                      console.warn('Failed to parse final JSON:', e)
+                      console.warn('Failed to parse final JSON:', e, 'Line:', line)
+                      // Try to extract JSON from the line if it's embedded
+                      const jsonMatch = line.match(/\{.*\}/)
+                      if (jsonMatch) {
+                        try {
+                          finalData = JSON.parse(jsonMatch[0])
+                          console.log('Extracted and parsed JSON:', finalData)
+                        } catch (e2) {
+                          console.warn('Failed to extract JSON:', e2)
+                        }
+                      }
                     }
                   } else if (line.includes('Error:')) {
                     // Error message
@@ -1154,7 +1166,22 @@ export default function MapEditor() {
         }
 
         if (!finalData) {
-          throw new Error('No final response received from streaming API')
+          console.warn('No final response received from streaming API, trying fallback...')
+          // Fallback: try to make a regular non-streaming request
+          const fallbackRequestBody = { ...requestBody, stream: false }
+          const fallbackResponse = await fetch('/api/llm/generate-map', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(fallbackRequestBody),
+            signal: controller.signal,
+          })
+
+          if (!fallbackResponse.ok) {
+            throw new Error(`Fallback request failed: ${fallbackResponse.status} ${fallbackResponse.statusText}`)
+          }
+
+          finalData = await fallbackResponse.json()
+          console.log('Fallback response received:', finalData)
         }
         data = finalData
       } else {

@@ -217,7 +217,9 @@ export async function POST(request: NextRequest) {
                   mapSize,
                 }
 
-                controller.enqueue(new TextEncoder().encode(JSON.stringify(finalResponse) + '\n'))
+                const finalResponseJson = JSON.stringify(finalResponse)
+                console.log('Sending final response:', finalResponseJson) // Debug log
+                controller.enqueue(new TextEncoder().encode(finalResponseJson + '\n'))
               } else {
                 const generatedHexes = await generator.generateMap({
                   width,
@@ -235,7 +237,9 @@ export async function POST(request: NextRequest) {
                   count: generatedHexes.length,
                   expectedCount: width * height,
                 }
-                controller.enqueue(new TextEncoder().encode(JSON.stringify(finalResponse) + '\n'))
+                const finalResponseJson = JSON.stringify(finalResponse)
+                console.log('Sending final response:', finalResponseJson) // Debug log
+                controller.enqueue(new TextEncoder().encode(finalResponseJson + '\n'))
               }
 
               controller.close()
