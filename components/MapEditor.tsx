@@ -2167,13 +2167,13 @@ export default function MapEditor() {
 
       // Copy/Paste with Ctrl+C / Ctrl+V (or Cmd on Mac)
       if (e.ctrlKey || e.metaKey) {
-        if (e.key === 'c' || e.key === 'C') {
+        if (e.code === 'KeyC') {
           e.preventDefault()
           copyHex()
           return
         }
 
-        if (e.key === 'v' || e.key === 'V') {
+        if (e.code === 'KeyV') {
           e.preventDefault()
           // Используем позицию курсора мыши (последнюю известную позицию hex под курсором)
           const targetHex = lastMouseHexRef.current
@@ -2186,7 +2186,7 @@ export default function MapEditor() {
         }
 
         // Undo/Redo with Ctrl+Z / Ctrl+Y or Ctrl+Shift+Z
-        if (e.key === 'z' || e.key === 'Z') {
+        if (e.code === 'KeyZ') {
           e.preventDefault()
           if (e.shiftKey) {
             // Ctrl+Shift+Z = Redo
@@ -2199,25 +2199,25 @@ export default function MapEditor() {
         }
 
         // File operations
-        if (e.key === 'n' || e.key === 'N') {
+        if (e.code === 'KeyN') {
           e.preventDefault()
           handleNewMap()
           return
         }
 
-        if (e.key === 'o' || e.key === 'O') {
+        if (e.code === 'KeyO') {
           e.preventDefault()
           handleLoadMap()
           return
         }
 
-        if (e.key === 's' || e.key === 'S') {
+        if (e.code === 'KeyS') {
           e.preventDefault()
           handleSaveMap()
           return
         }
 
-        if (e.key === 'y' || e.key === 'Y') {
+        if (e.code === 'KeyY') {
           e.preventDefault()
           // Ctrl+Y = Redo
           await redo()
@@ -2230,7 +2230,7 @@ export default function MapEditor() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [selectedHexes])
+  }, [selectedHexes, currentHeightLevel, mapName, mapPath, hasUnsavedChanges])
 
   // Функция для создания меша выделения
   const createSelectionMesh = (): THREE.Mesh => {
