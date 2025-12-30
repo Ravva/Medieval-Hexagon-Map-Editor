@@ -28,7 +28,7 @@ interface TileDescriptor {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { width, height, prompt, biome, returnFormat, useLocalModel, localUrl, model, stream } = body
+    const { width, height, prompt, biome, returnFormat, useLocalModel, localUrl, model, stream, geminiApiKey } = body
 
     // Validate parameters
     if (!width || !height || typeof width !== 'number' || typeof height !== 'number') {
@@ -41,6 +41,22 @@ export async function POST(request: NextRequest) {
     if (width <= 0 || height <= 0 || width > 100 || height > 100) {
       return NextResponse.json(
         { error: 'width and height must be between 1 and 100' },
+        { status: 400 }
+      )
+    }
+
+    // Validate API key for Gemini
+    if (!useLocalModel && !geminiApiKey) {
+      return NextResponse.json(
+        { error: 'Gemini API key is required' },
+        { status: 400 }
+      )
+    }
+
+    // Validate local model settings
+    if (useLocalModel && (!localUrl || !model)) {
+      return NextResponse.json(
+        { error: 'Local model URL and model name are required' },
         { status: 400 }
       )
     }
@@ -153,7 +169,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Используем стандартный MapGenerator для Gemini
-    const generator = new MapGenerator()
+    const generator = new MapGenerator(geminiApiKey)
 
     if (returnFormat === 'serialized') {
       const gameMap = await generator.generateMapToGameMap({

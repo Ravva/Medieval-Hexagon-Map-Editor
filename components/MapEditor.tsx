@@ -468,6 +468,7 @@ export default function MapEditor() {
   const [generateMapSize, setGenerateMapSize] = useState<MapSize>('tiny')
   const [generatePrompt, setGeneratePrompt] = useState('')
   const [generateBiome, setGenerateBiome] = useState<'plains' | 'water' | 'forest' | 'mountain'>('plains')
+  const [geminiApiKey, setGeminiApiKey] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
@@ -992,6 +993,18 @@ export default function MapEditor() {
         return
       }
 
+      // Проверяем наличие API ключа для Gemini
+      if (!useLocalModel && !geminiApiKey.trim()) {
+        showNotification('error', 'Please enter your Gemini API key')
+        return
+      }
+
+      // Проверяем настройки локальной модели
+      if (useLocalModel && (!localModelUrl.trim() || !selectedLocalModel)) {
+        showNotification('error', 'Please configure local model settings')
+        return
+      }
+
       setIsGenerating(true)
       setLoadingText('Generating map via LLM...')
       setIsLoading(true)
@@ -1019,10 +1032,13 @@ export default function MapEditor() {
         requestBody.useLocalModel = true
         requestBody.localUrl = localModelUrl
         requestBody.model = selectedLocalModel || localModels[0]?.id
+      } else {
+        // Добавляем API ключ Gemini
+        requestBody.geminiApiKey = geminiApiKey.trim()
       }
 
-      // Increase timeout for local models (may take longer to generate)
-      const timeout = useLocalModel ? 600000 : 30000 // 10 minutes for local, 30 sec for Gemini
+      // Increase timeout for local models and Gemini (may take longer to generate)
+      const timeout = useLocalModel ? 600000 : 300000 // 10 minutes for local, 5 minutes for Gemini
       const controller = new AbortController()
 
       // Start progress tracking
@@ -2643,6 +2659,34 @@ export default function MapEditor() {
                 </Tabs>
               </div>
 
+              {/* Gemini API settings */}
+              {!useLocalModel && (
+                <div className="space-y-3 p-4 bg-cyan-500/10 border border-cyan-500/20 rounded-lg">
+                  <div className="space-y-2">
+                    <Label htmlFor="gemini-api-key">Gemini API Key</Label>
+                    <Input
+                      id="gemini-api-key"
+                      type="password"
+                      value={geminiApiKey}
+                      onChange={(e) => setGeminiApiKey(e.target.value)}
+                      placeholder="AIzaSy..."
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-xs text-cyan-400">
+                      Get your API key from{' '}
+                      <a
+                        href="https://aistudio.google.com/app/apikey"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline hover:text-cyan-300"
+                      >
+                        Google AI Studio
+                      </a>
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Local server settings */}
               {useLocalModel && (
                 <div className="space-y-3 p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
@@ -2768,7 +2812,7 @@ export default function MapEditor() {
                   {useLocalModel ? (
                     <p>Local models may take 5-10 minutes to generate a map depending on size. The current map will be replaced.</p>
                   ) : (
-                    <p>Generation may take 5-10 seconds. The current map will be replaced.</p>
+                    <p>Generation may take up to 5 minutes. The current map will be replaced.</p>
                   )}
                 </div>
               ) : null}
@@ -2782,6 +2826,7 @@ export default function MapEditor() {
                 disabled={
                   isGenerating ||
                   !generatePrompt.trim() ||
+                  (!useLocalModel && !geminiApiKey.trim()) ||
                   (useLocalModel && (!selectedLocalModel && localModels.length > 0))
                 }
               >
