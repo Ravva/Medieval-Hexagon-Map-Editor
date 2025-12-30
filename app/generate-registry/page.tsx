@@ -288,7 +288,7 @@ export default function GenerateRegistryPage() {
     } catch (error) {
       console.error('Error generating registry:', error)
       alert(
-        `Ошибка при генерации реестра: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Error generating registry: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
     } finally {
       setIsGenerating(false)
@@ -330,7 +330,7 @@ export default function GenerateRegistryPage() {
     } catch (error) {
       console.error('Ошибка при сохранении тайла:', error)
       alert(
-        `Ошибка при сохранении тайла: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Error saving tile: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
     }
   }
@@ -358,11 +358,11 @@ export default function GenerateRegistryPage() {
   }
 
   const getConnectionString = (exits: TileConnections | undefined): string => {
-    if (!exits) return 'Нет соединений'
+    if (!exits) return 'No connections'
     const connections = Object.entries(exits)
       .filter(([, value]) => value)
       .map(([key]) => key)
-    return connections.length > 0 ? connections.join(', ') : 'Нет соединений'
+    return connections.length > 0 ? connections.join(', ') : 'No connections'
   }
 
   const getConnectionDisplay = (
@@ -500,12 +500,12 @@ export default function GenerateRegistryPage() {
               {isGenerating ? (
                 <>
                   <CircleNotch className="mr-2 h-4 w-4 animate-spin" />
-                  Загрузка...
+                  Loading...
                 </>
               ) : (
                 <>
                   <ArrowClockwise className="mr-2 h-4 w-4" />
-                  Загрузить реестр
+                  Load Registry
                 </>
               )}
             </Button>
@@ -514,12 +514,12 @@ export default function GenerateRegistryPage() {
 
         {registryData && (
           <div className="p-4 border-b border-border">
-            <div className="text-sm text-muted-foreground mb-2">Статистика:</div>
+            <div className="text-sm text-muted-foreground mb-2">Statistics:</div>
             <div className="space-y-1 text-sm">
-              <div>Всего тайлов: {registryData.totalTiles}</div>
-              <div>С соединениями: {registryData.statistics.tilesWithConnections}</div>
-              <div>Требуют проверки: {tilesToValidate.length}</div>
-              <div>Утверждено: {approvedTiles.size}</div>
+              <div>Total tiles: {registryData.totalTiles}</div>
+              <div>With connections: {registryData.statistics.tilesWithConnections}</div>
+              <div>Validation required: {tilesToValidate.length}</div>
+              <div>Approved: {approvedTiles.size}</div>
             </div>
           </div>
         )}
@@ -545,7 +545,7 @@ export default function GenerateRegistryPage() {
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm truncate">{tile.name}</div>
                         <div className="text-xs text-muted-foreground mt-1">
-                          {tile.subcategory} • {connectionCount} соединений
+                          {tile.subcategory} • {connectionCount} connections
                         </div>
                         {tile.connections && (
                           <div className="text-xs text-muted-foreground mt-1 truncate">
@@ -571,11 +571,11 @@ export default function GenerateRegistryPage() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <h2 className="text-lg font-semibold">
-                {selectedTile ? `Просмотр: ${selectedTile.name}` : 'Выберите тайл для просмотра'}
+                {selectedTile ? `Preview: ${selectedTile.name}` : 'Select a tile to preview'}
               </h2>
               {selectedTile && (
                 <p className="text-sm text-muted-foreground mt-1">
-                  ЛКМ по точке - следующий тип, ПКМ - предыдущий тип
+                  LMB on point - next type, RMB - previous type
                 </p>
               )}
             </div>
@@ -596,7 +596,7 @@ export default function GenerateRegistryPage() {
                   {/* Left column - Original data */}
                   <div>
                     <h3 className="text-sm font-semibold mb-2 text-muted-foreground">
-                      Исходные данные
+                      Original Data
                     </h3>
                     <div className="space-y-1">
                       {(
@@ -639,7 +639,7 @@ export default function GenerateRegistryPage() {
                   {/* Right column - Current data */}
                   <div>
                     <h3 className="text-sm font-semibold mb-2 text-muted-foreground">
-                      Текущие данные
+                      Current Data
                     </h3>
                     <div className="space-y-1">
                       {(
@@ -688,7 +688,7 @@ export default function GenerateRegistryPage() {
                 variant={approvedTiles.has(selectedTile.tile_id) ? 'default' : 'outline'}
               >
                 <Check className="mr-2 h-4 w-4" />
-                Утвердить
+                Approve
               </Button>
               <Button
                 onClick={() => {
@@ -699,7 +699,7 @@ export default function GenerateRegistryPage() {
                 variant="outline"
               >
                 <ArrowClockwise className="mr-2 h-4 w-4" />
-                Сбросить изменения
+                Reset Changes
               </Button>
             </div>
           </div>

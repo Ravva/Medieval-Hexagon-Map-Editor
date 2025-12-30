@@ -7,7 +7,7 @@ const MapEditor = dynamic(() => import('@/components/MapEditor'), {
   ssr: false,
   loading: () => (
     <div className="flex h-screen w-screen items-center justify-center bg-background">
-      <div className="text-lg">Загрузка редактора карт...</div>
+      <div className="text-lg">Loading Map Editor...</div>
     </div>
   ),
 })

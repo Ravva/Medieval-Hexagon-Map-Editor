@@ -412,7 +412,7 @@ Return ONLY valid JSON, no other text.`
           <Tabs value={apiMode} onValueChange={(v) => setApiMode(v as ApiMode)}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="gemini">Gemini API</TabsTrigger>
-              <TabsTrigger value="local">Локальный сервер</TabsTrigger>
+              <TabsTrigger value="local">Local Server</TabsTrigger>
             </TabsList>
 
             <TabsContent value="gemini" className="space-y-4">
@@ -538,7 +538,7 @@ Return ONLY valid JSON, no other text.`
                     </Select>
                     {selectedModel && (
                       <p className="text-xs text-purple-400">
-                        Выбрана модель: <code className="bg-black/30 px-1 rounded">{selectedModel}</code>
+                        Model selected: <code className="bg-black/30 px-1 rounded">{selectedModel}</code>
                       </p>
                     )}
                   </div>
@@ -593,8 +593,8 @@ Return ONLY valid JSON, no other text.`
             }`}>
               <p className={apiMode === 'gemini' ? 'text-cyan-400' : 'text-purple-400'}>
                 {apiMode === 'gemini'
-                  ? 'Выполняется запрос к Gemini API...'
-                  : `Выполняется запрос к ${localUrl}...`}
+                  ? 'Executing request to Gemini API...'
+                  : `Executing request to ${localUrl}...`}
               </p>
             </div>
           )}
@@ -602,7 +602,7 @@ Return ONLY valid JSON, no other text.`
           {error && (
             <Card className="border-red-500/50 bg-red-500/10">
               <CardContent className="pt-6">
-                <Badge variant="destructive" className="mb-2">Ошибка</Badge>
+                <Badge variant="destructive" className="mb-2">Error</Badge>
                 <pre className="text-sm text-red-400 whitespace-pre-wrap font-mono">
                   {error}
                 </pre>
@@ -613,9 +613,9 @@ Return ONLY valid JSON, no other text.`
           {result && (
             <Card className="border-green-500/50 bg-green-500/10">
               <CardHeader>
-                <CardTitle className="text-green-400">Результат</CardTitle>
+                <CardTitle className="text-green-400">Result</CardTitle>
                 <Badge variant="outline" className="w-fit">
-                  {result.success !== false ? 'Успешно' : 'Ошибка'}
+                  {result.success !== false ? 'Success' : 'Error'}
                 </Badge>
               </CardHeader>
               <CardContent>
@@ -629,7 +629,7 @@ Return ONLY valid JSON, no other text.`
                     </div>
                   )}
                   <div>
-                    <strong className="text-cyan-400">Ответ API:</strong>
+                    <strong className="text-cyan-400">API Response:</strong>
                     <pre className="mt-2 text-sm bg-black/30 p-4 rounded-lg overflow-auto max-h-96 font-mono">
                       {JSON.stringify(result, null, 2)}
                     </pre>

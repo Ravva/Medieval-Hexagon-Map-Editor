@@ -683,7 +683,7 @@ export default function MapEditor() {
       return
     }
 
-    setLoadingText('Заполнение карты...')
+    setLoadingText('Filling map...')
     const mapDimensions = MAP_SIZES[mapSize]
     const map = new GameMap(mapDimensions.width, mapDimensions.height)
 
@@ -1573,7 +1573,7 @@ export default function MapEditor() {
       if (hexUnderCursor && mapRef.current.hasHex(hexUnderCursor.q, hexUnderCursor.r)) {
         hexesToCopy = [hexUnderCursor]
       } else {
-        showNotification('error', 'Нет тайла для копирования. Наведите курсор на тайл или выделите его.')
+        showNotification('error', 'No tile to copy. Hover over a tile or select it.')
         return false
       }
     }
@@ -1597,7 +1597,7 @@ export default function MapEditor() {
     }
 
     if (hexes.length === 0) {
-      showNotification('error', 'Нет тайлов для копирования')
+      showNotification('error', 'No tiles to copy')
       return false
     }
 
@@ -1619,7 +1619,7 @@ export default function MapEditor() {
     // Сохраняем в ref
     clipboardDataRef.current = clipboardData
 
-    showNotification('success', `Скопировано тайлов: ${hexes.length}`)
+    showNotification('success', `Tiles copied: ${hexes.length}`)
     return true
   }
 
@@ -1646,7 +1646,7 @@ export default function MapEditor() {
     }
 
     if (!clipboardData) {
-      showNotification('error', 'Буфер обмена пуст')
+      showNotification('error', 'Clipboard is empty')
       return false
     }
 
@@ -1654,7 +1654,7 @@ export default function MapEditor() {
     const hexesToPaste = clipboardData.hexes || (clipboardData.hex ? [clipboardData.hex] : [])
 
     if (hexesToPaste.length === 0) {
-      showNotification('error', 'Буфер обмена пуст')
+      showNotification('error', 'Clipboard is empty')
       return false
     }
 
@@ -1719,7 +1719,7 @@ export default function MapEditor() {
     }
 
     if (pastedCount === 0) {
-      showNotification('error', 'Не удалось вставить тайлы')
+      showNotification('error', 'Failed to paste tiles')
       return false
     }
 
@@ -1732,7 +1732,7 @@ export default function MapEditor() {
     // Сохраняем состояние после вставки для истории
     saveHistoryState()
 
-    showNotification('success', `Вставлено тайлов: ${pastedCount}`)
+    showNotification('success', `Tiles pasted: ${pastedCount}`)
     return true
   }
 
@@ -1800,7 +1800,7 @@ export default function MapEditor() {
         nextLevel++
       }
       if (nextLevel > 4) {
-        showNotification('error', 'Нет свободных уровней для копирования')
+        showNotification('error', 'No free levels to copy')
         return false
       }
       targetHeight = nextLevel
@@ -1830,7 +1830,7 @@ export default function MapEditor() {
       })
     })
 
-    showNotification('success', 'Тайл скопирован')
+    showNotification('success', 'Tile copied')
     return true
   }
 
@@ -2180,7 +2180,7 @@ export default function MapEditor() {
           if (targetHex) {
             await pasteHex(targetHex.q, targetHex.r)
           } else {
-            showNotification('error', 'Наведите курсор на ячейку для вставки')
+            showNotification('error', 'Hover over a cell to paste')
           }
           return
         }
