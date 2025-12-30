@@ -2035,202 +2035,186 @@ export default function MapEditor() {
   }, [currentHeightLevel])
 
   // Keyboard controls
-  useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
-      // Don't trigger if typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+  const handleKeyDown = useCallback(async (e: KeyboardEvent) => {
+    // Don't trigger if typing in an input
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
 
-      // WASD: Move selected hex if selected, otherwise pan camera
-      // Работаем только с первым выделенным hex для навигации
-      if (selectedHexes.length > 0 && mapRef.current) {
-        const selectedHex = selectedHexes[0]
-        const neighbors = mapRef.current.getNeighborCoordinates(selectedHex.q, selectedHex.r)
-        const hexStack = mapRef.current.getHexStack(selectedHex.q, selectedHex.r)
-        if (hexStack.length > 0) {
-          const hexHeight = hexStack[hexStack.length - 1].height
-          let targetCoords: { q: number; r: number } | null = null
+    // WASD: Move selected hex if selected, otherwise pan camera
+    // Работаем только с первым выделенным hex для навигации
+    if (selectedHexes.length > 0 && mapRef.current) {
+      const selectedHex = selectedHexes[0]
+      const neighbors = mapRef.current.getNeighborCoordinates(selectedHex.q, selectedHex.r)
+      const hexStack = mapRef.current.getHexStack(selectedHex.q, selectedHex.r)
+      if (hexStack.length > 0) {
+        const hexHeight = hexStack[hexStack.length - 1].height
+        let targetCoords: { q: number; r: number } | null = null
 
-          // Map WASD to neighbor directions (simplified with axial coordinates - no conditional logic!)
-          // Directions in axial coordinates are always the same
-          // Инвертировано: W/S и A/D поменяны местами
-          if (e.code === 'KeyW') {
-            // South East (q: 0, r: 1) - инвертировано
-            targetCoords = neighbors.find(n => n.q === selectedHex.q && n.r === selectedHex.r + 1) || neighbors.find(n => n.r > selectedHex.r) || null
-          } else if (e.code === 'KeyS') {
-            // North West (q: 0, r: -1) - инвертировано
-            targetCoords = neighbors.find(n => n.q === selectedHex.q && n.r === selectedHex.r - 1) || neighbors.find(n => n.r < selectedHex.r) || null
-          } else if (e.code === 'KeyA') {
-            // East (q: 1, r: 0) - инвертировано
-            targetCoords = neighbors.find(n => n.q === selectedHex.q + 1 && n.r === selectedHex.r) || neighbors.find(n => n.q > selectedHex.q) || null
-          } else if (e.code === 'KeyD') {
-            // West (q: -1, r: 0) - инвертировано
-            targetCoords = neighbors.find(n => n.q === selectedHex.q - 1 && n.r === selectedHex.r) || neighbors.find(n => n.q < selectedHex.q) || null
-          }
-
-          if (targetCoords && !mapRef.current.hasHex(targetCoords.q, targetCoords.r, hexHeight)) {
-            await moveHex(selectedHex.q, selectedHex.r, targetCoords.q, targetCoords.r)
-          }
+        // Map WASD to neighbor directions (simplified with axial coordinates - no conditional logic!)
+        // Directions in axial coordinates are always the same
+        // Инвертировано: W/S и A/D поменяны местами
+        if (e.code === 'KeyW') {
+          // South East (q: 0, r: 1) - инвертировано
+          targetCoords = neighbors.find(n => n.q === selectedHex.q && n.r === selectedHex.r + 1) || neighbors.find(n => n.r > selectedHex.r) || null
+        } else if (e.code === 'KeyS') {
+          // North West (q: 0, r: -1) - инвертировано
+          targetCoords = neighbors.find(n => n.q === selectedHex.q && n.r === selectedHex.r - 1) || neighbors.find(n => n.r < selectedHex.r) || null
+        } else if (e.code === 'KeyA') {
+          // East (q: 1, r: 0) - инвертировано
+          targetCoords = neighbors.find(n => n.q === selectedHex.q + 1 && n.r === selectedHex.r) || neighbors.find(n => n.q > selectedHex.q) || null
+        } else if (e.code === 'KeyD') {
+          // West (q: -1, r: 0) - инвертировано
+          targetCoords = neighbors.find(n => n.q === selectedHex.q - 1 && n.r === selectedHex.r) || neighbors.find(n => n.q < selectedHex.q) || null
         }
-      } else {
-        // No selection: pan camera with WASD
-        const moveSpeed = 5
-        const yaw = cameraAngleYRef.current
-        const forward = new THREE.Vector3(-Math.cos(yaw), 0, -Math.sin(yaw))
-        const right = new THREE.Vector3(-Math.sin(yaw), 0, Math.cos(yaw))
 
-        if (e.code === 'KeyW') cameraTargetRef.current.add(forward.multiplyScalar(moveSpeed))
-        if (e.code === 'KeyS') cameraTargetRef.current.add(forward.multiplyScalar(-moveSpeed))
-        // Инвертировано: A влево, D вправо
-        if (e.code === 'KeyA') cameraTargetRef.current.add(right.multiplyScalar(moveSpeed))
-        if (e.code === 'KeyD') cameraTargetRef.current.add(right.multiplyScalar(-moveSpeed))
+        if (targetCoords && !mapRef.current.hasHex(targetCoords.q, targetCoords.r, hexHeight)) {
+          await moveHex(selectedHex.q, selectedHex.r, targetCoords.q, targetCoords.r)
+        }
       }
+    } else {
+      // No selection: pan camera with WASD
+      const moveSpeed = 5
+      const yaw = cameraAngleYRef.current
+      const forward = new THREE.Vector3(-Math.cos(yaw), 0, -Math.sin(yaw))
+      const right = new THREE.Vector3(-Math.sin(yaw), 0, Math.cos(yaw))
 
-      // Q/E Rotating, R/F Height change for selected hex (работаем только с первым выделенным)
-      if (selectedHexes.length > 0 && mapRef.current) {
-        const selectedHex = selectedHexes[0]
-        // Always work with topmost hex
-        const hexStack = mapRef.current.getHexStack(selectedHex.q, selectedHex.r)
-        const hex = hexStack.length > 0 ? hexStack[hexStack.length - 1] : null
+      if (e.code === 'KeyW') cameraTargetRef.current.add(forward.multiplyScalar(moveSpeed))
+      if (e.code === 'KeyS') cameraTargetRef.current.add(forward.multiplyScalar(-moveSpeed))
+      // Инвертировано: A влево, D вправо
+      if (e.code === 'KeyA') cameraTargetRef.current.add(right.multiplyScalar(moveSpeed))
+      if (e.code === 'KeyD') cameraTargetRef.current.add(right.multiplyScalar(-moveSpeed))
+    }
 
-        if (hex) {
-          const oldHeight = hex.height
+    // Q/E Rotating, R/F Height change for selected hex (работаем только с первым выделенным)
+    if (selectedHexes.length > 0 && mapRef.current) {
+      const selectedHex = selectedHexes[0]
+      // Always work with topmost hex
+      const hexStack = mapRef.current.getHexStack(selectedHex.q, selectedHex.r)
+      const hex = hexStack.length > 0 ? hexStack[hexStack.length - 1] : null
 
-          if (e.code === 'KeyQ') {
-            hex.rotation = (hex.rotation || 0) + Math.PI / 3  // Против часовой (увеличиваем угол)
-            updateHexMesh(selectedHex.q, selectedHex.r, hex.height)
-          }
-          if (e.code === 'KeyE') {
-            hex.rotation = (hex.rotation || 0) - Math.PI / 3  // По часовой (уменьшаем угол)
-            updateHexMesh(selectedHex.q, selectedHex.r, hex.height)
-          }
-          if (e.code === 'KeyR') {
-            const newHeight = Math.min(4, (hex.height || 0) + 1)
-            if (newHeight !== oldHeight && !mapRef.current.hasHex(selectedHex.q, selectedHex.r, newHeight)) {
-              // Remove from old height
-              mapRef.current.removeHex(selectedHex.q, selectedHex.r, oldHeight)
-              const oldMeshKey = `${selectedHex.q},${selectedHex.r}_${oldHeight}`
-              const oldMesh = hexMeshesRef.current.get(oldMeshKey)
-              if (oldMesh && sceneRef.current) {
-                sceneRef.current.remove(oldMesh)
-                hexMeshesRef.current.delete(oldMeshKey)
-              }
+      if (hex) {
+        const oldHeight = hex.height
 
-              // Add at new height
+        if (e.code === 'KeyQ') {
+          hex.rotation = (hex.rotation || 0) + Math.PI / 3  // Против часовой (увеличиваем угол)
+          saveHistoryState()
+          await buildMap()
+        } else if (e.code === 'KeyE') {
+          hex.rotation = (hex.rotation || 0) - Math.PI / 3  // По часовой (уменьшаем угол)
+          saveHistoryState()
+          await buildMap()
+        } else if (e.code === 'KeyR') {
+          // Raise
+          if (oldHeight < 4) {
+            const newHeight = oldHeight + 1
+            if (!mapRef.current.hasHex(hex.q, hex.r, newHeight)) {
+              saveHistoryState()
               hex.height = newHeight
-              mapRef.current.setHex(selectedHex.q, selectedHex.r, hex)
-              await updateHexMesh(selectedHex.q, selectedHex.r, newHeight)
-
-              // Force selection highlight update after mesh is created
+              mapRef.current.removeHex(hex.q, hex.r, oldHeight)
+              mapRef.current.addHex(hex)
+              await buildMap()
+              // Move selection mesh to new height
               requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                  setSelectedHexes([selectedHex])
-                })
+                setSelectedHexes([selectedHex])
               })
             }
           }
-          if (e.code === 'KeyF') {
-            const newHeight = Math.max(0, (hex.height || 0) - 1)
-            if (newHeight !== oldHeight && !mapRef.current.hasHex(selectedHex.q, selectedHex.r, newHeight)) {
-              // Remove from old height
-              mapRef.current.removeHex(selectedHex.q, selectedHex.r, oldHeight)
-              const oldMeshKey = `${selectedHex.q},${selectedHex.r}_${oldHeight}`
-              const oldMesh = hexMeshesRef.current.get(oldMeshKey)
-              if (oldMesh && sceneRef.current) {
-                sceneRef.current.remove(oldMesh)
-                hexMeshesRef.current.delete(oldMeshKey)
-              }
-
-              // Add at new height
+        } else if (e.code === 'KeyF') {
+          // Lower
+          if (oldHeight > 0) {
+            const newHeight = oldHeight - 1
+            if (!mapRef.current.hasHex(hex.q, hex.r, newHeight)) {
+              saveHistoryState()
               hex.height = newHeight
-              mapRef.current.setHex(selectedHex.q, selectedHex.r, hex)
-              await updateHexMesh(selectedHex.q, selectedHex.r, newHeight)
-
-              // Force selection highlight update after mesh is created
+              mapRef.current.removeHex(hex.q, hex.r, oldHeight)
+              mapRef.current.addHex(hex)
+              await buildMap()
+              // Move selection mesh to new height
               requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                  setSelectedHexes([selectedHex])
-                })
+                setSelectedHexes([selectedHex])
               })
             }
           }
-        }
-      }
-
-      // Delete key deletes all selected hexes (topmost)
-      if (e.code === 'Delete' && selectedHexes.length > 0) {
-        saveHistoryState()
-        for (const hex of selectedHexes) {
-          await removeHex(hex.q, hex.r)
-        }
-        setSelectedHexes([])
-      }
-
-      // Copy/Paste with Ctrl+C / Ctrl+V (or Cmd on Mac)
-      if (e.ctrlKey || e.metaKey) {
-        if (e.code === 'KeyC') {
-          e.preventDefault()
-          copyHex()
-          return
-        }
-
-        if (e.code === 'KeyV') {
-          e.preventDefault()
-          // Используем позицию курсора мыши (последнюю известную позицию hex под курсором)
-          const targetHex = lastMouseHexRef.current
-          if (targetHex) {
-            await pasteHex(targetHex.q, targetHex.r)
-          } else {
-            showNotification('error', 'Hover over a cell to paste')
-          }
-          return
-        }
-
-        // Undo/Redo with Ctrl+Z / Ctrl+Y or Ctrl+Shift+Z
-        if (e.code === 'KeyZ') {
-          e.preventDefault()
-          if (e.shiftKey) {
-            // Ctrl+Shift+Z = Redo
-            await redo()
-          } else {
-            // Ctrl+Z = Undo
-            await undo()
-          }
-          return
-        }
-
-        // File operations
-        if (e.code === 'KeyN') {
-          e.preventDefault()
-          handleNewMap()
-          return
-        }
-
-        if (e.code === 'KeyO') {
-          e.preventDefault()
-          handleLoadMap()
-          return
-        }
-
-        if (e.code === 'KeyS') {
-          e.preventDefault()
-          handleSaveMap()
-          return
-        }
-
-        if (e.code === 'KeyY') {
-          e.preventDefault()
-          // Ctrl+Y = Redo
-          await redo()
-          return
         }
       }
     }
 
+    // Delete key deletes all selected hexes (topmost)
+    if (e.code === 'Delete' && selectedHexes.length > 0) {
+      saveHistoryState()
+      for (const hex of selectedHexes) {
+        await removeHex(hex.q, hex.r)
+      }
+      setSelectedHexes([])
+    }
+
+    // Copy/Paste with Ctrl+C / Ctrl+V (or Cmd on Mac)
+    if (e.ctrlKey || e.metaKey) {
+      if (e.code === 'KeyC') {
+        e.preventDefault()
+        copyHex()
+        return
+      }
+
+      if (e.code === 'KeyV') {
+        e.preventDefault()
+        // Используем позицию курсора мыши (последнюю известную позицию hex под курсором)
+        const targetHex = lastMouseHexRef.current
+        if (targetHex) {
+          await pasteHex(targetHex.q, targetHex.r)
+        } else {
+          showNotification('error', 'Hover over a cell to paste')
+        }
+        return
+      }
+
+      // Undo/Redo with Ctrl+Z / Ctrl+Y or Ctrl+Shift+Z
+      if (e.code === 'KeyZ') {
+        e.preventDefault()
+        if (e.shiftKey) {
+          // Ctrl+Shift+Z = Redo
+          await redo()
+        } else {
+          // Ctrl+Z = Undo
+          await undo()
+        }
+        return
+      }
+
+      // File operations
+      if (e.code === 'KeyN') {
+        e.preventDefault()
+        handleNewMap()
+        return
+      }
+
+      if (e.code === 'KeyO') {
+        e.preventDefault()
+        handleLoadMap()
+        return
+      }
+
+      if (e.code === 'KeyS') {
+        e.preventDefault()
+        handleSaveMap()
+        return
+      }
+
+      if (e.code === 'KeyY') {
+        e.preventDefault()
+        // Ctrl+Y = Redo
+        await redo()
+        return
+      }
+    }
+  }, [selectedHexes, currentHeightLevel, mapName, mapPath, hasUnsavedChanges, moveHex, removeHex, copyHex, pasteHex, undo, redo, handleNewMap, handleLoadMap, handleSaveMap, saveHistoryState, buildMap, setSelectedHexes])
+
+  useEffect(() => {
     window.addEventListener('keydown', handleKeyDown)
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [selectedHexes, currentHeightLevel, mapName, mapPath, hasUnsavedChanges])
+  }, [handleKeyDown])
+
 
   // Функция для создания меша выделения
   const createSelectionMesh = (): THREE.Mesh => {
