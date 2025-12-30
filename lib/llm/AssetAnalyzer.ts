@@ -73,6 +73,9 @@ export interface TileDescriptor {
   rarity?: number
   preferred_neighbors?: string[]
   incompatible_neighbors?: string[]
+
+  // Идентификация базовых тайлов (только они могут быть размещены на уровне 0)
+  is_base_tile: boolean
 }
 
 export class AssetAnalyzer {
@@ -414,6 +417,7 @@ export class AssetAnalyzer {
       walkable: semantics.walkable,
       visual_style: semantics.visualStyle,
       connections,
+      is_base_tile: semantics.category === 'tiles', // Только тайлы из папки tiles могут быть на уровне 0
     }
   }
 

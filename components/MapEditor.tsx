@@ -16,7 +16,8 @@ import {
   List,
   Keyboard,
   Sparkle,
-  File
+  File,
+  Gear
 } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -40,6 +41,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { SaveMapDialog, type SaveMapData } from '@/components/SaveMapDialog'
 import { NewMapDialog } from '@/components/NewMapDialog'
 import { UnsavedDataDialog } from '@/components/UnsavedDataDialog'
+import { SystemPromptDialog } from '@/components/SystemPromptDialog'
+import { ModelPreview } from '@/components/ModelPreview'
+import { GenerateMapDialog } from '@/components/GenerateMapDialog'
+import { AssetPanel } from '@/components/AssetPanel'
+import { createHexMesh, createHexagonalGrid, setupLighting, createSelectionMesh } from '@/lib/three/mapUtils'
+import { MAP_SIZES, type MapSize, type EditMode, type AssetModel, type AssetFolder, type AssetCategory, type ClipboardData, type HistoryState } from '@/components/types'
 import { Hex, TERRAIN_CONFIG, TERRAIN_TYPES, type TerrainType } from '@/lib/game/Hex'
 import { Map as GameMap } from '@/lib/game/Map'
 import { MapSerializer, type BuildingData } from '@/lib/game/MapSerializer'
@@ -47,371 +54,6 @@ import { axialToWorld, worldToAxial, offsetToAxial } from '@/lib/game/HexCoordin
 import { modelLoader } from '@/lib/three/ModelLoader'
 import { cn } from '@/lib/utils'
 
-type EditMode = 'terrain' | 'building'
-
-type MapSize = 'tiny' | 'small' | 'medium' | 'large' | 'very-large'
-
-const MAP_SIZES: Record<MapSize, { label: string; width: number; height: number }> = {
-  'tiny': { label: 'Tiny', width: 10, height: 10 },
-  'small': { label: 'Small', width: 25, height: 25 },
-  'medium': { label: 'Medium', width: 50, height: 50 },
-  'large': { label: 'Large', width: 75, height: 75 },
-  'very-large': { label: 'Very large', width: 100, height: 100 },
-}
-
-interface AssetModel {
-  name: string
-  obj: string
-  mtl: string
-}
-
-interface AssetFolder {
-  name: string
-  models: AssetModel[]
-}
-
-interface AssetCategory {
-  name: string
-  folders: AssetFolder[]
-}
-
-interface ClipboardData {
-  hexes: Array<{
-    q: number
-    r: number
-    terrain: TerrainType
-    height: number
-    rotation?: number
-    modelData?: { obj: string; mtl: string; name: string }
-    hasRiver?: boolean
-  }>
-  sourceHeight: number
-  globalLevel: number
-  // Для обратной совместимости с одиночным выделением
-  hex?: {
-    q: number
-    r: number
-    terrain: TerrainType
-    height: number
-    rotation?: number
-    modelData?: { obj: string; mtl: string; name: string }
-    hasRiver?: boolean
-  }
-}
-
-interface HistoryState {
-  map: string // JSON сериализация карты
-  timestamp: number
-}
-
-// Глобальный рендерер и сцена для превью (чтобы не превышать лимит WebGL контекстов)
-let sharedPreviewRenderer: THREE.WebGLRenderer | null = null
-let sharedPreviewScene: THREE.Scene | null = null
-let sharedPreviewCamera: THREE.PerspectiveCamera | null = null
-
-// Очередь для последовательного рендеринга превью
-let renderQueue: Promise<void> = Promise.resolve()
-
-// Функция для проверки загрузки всех текстур в объекте
-const waitForTexturesLoaded = (object: THREE.Object3D, maxWait = 3000): Promise<void> => {
-  const textures: THREE.Texture[] = []
-
-  object.traverse((child) => {
-    if (child instanceof THREE.Mesh) {
-      const material = child.material
-      const materials = Array.isArray(material) ? material : [material]
-
-      materials.forEach((mat) => {
-        if (mat instanceof THREE.MeshStandardMaterial || mat instanceof THREE.MeshPhongMaterial || mat instanceof THREE.MeshLambertMaterial) {
-          if (mat.map && !textures.includes(mat.map)) textures.push(mat.map)
-          if (mat.normalMap && !textures.includes(mat.normalMap)) textures.push(mat.normalMap)
-          if (mat.aoMap && !textures.includes(mat.aoMap)) textures.push(mat.aoMap)
-          if (mat.emissiveMap && !textures.includes(mat.emissiveMap)) textures.push(mat.emissiveMap)
-
-          if (mat instanceof THREE.MeshStandardMaterial) {
-            if (mat.roughnessMap && !textures.includes(mat.roughnessMap)) textures.push(mat.roughnessMap)
-            if (mat.metalnessMap && !textures.includes(mat.metalnessMap)) textures.push(mat.metalnessMap)
-          }
-        }
-      })
-    }
-  })
-
-  if (textures.length === 0) {
-    // Нет текстур - ждем один кадр для применения материалов
-    return new Promise<void>((resolve) => {
-      requestAnimationFrame(() => resolve())
-    })
-  }
-
-  // Проверяем, что все текстуры загружены
-  return Promise.all(
-    textures.map((texture) => {
-      return new Promise<void>((resolve) => {
-        // Проверяем, есть ли у текстуры изображение
-        if (!texture.image) {
-          // Текстура еще не имеет изображения - ждем
-          const checkInterval = setInterval(() => {
-            if (texture.image) {
-              clearInterval(checkInterval)
-              clearTimeout(timeout)
-              resolve()
-            }
-          }, 50)
-
-          const timeout = setTimeout(() => {
-            clearInterval(checkInterval)
-            resolve() // Продолжаем даже если таймаут
-          }, maxWait)
-          return
-        }
-
-        const image = texture.image as HTMLImageElement | HTMLCanvasElement | VideoFrame | ImageBitmap | null
-
-        // Canvas и другие типы всегда готовы
-        if (image instanceof HTMLCanvasElement || image instanceof ImageBitmap || image instanceof VideoFrame) {
-          resolve()
-          return
-        }
-
-        // Для HTMLImageElement проверяем complete
-        if (image instanceof HTMLImageElement) {
-          if (image.complete && image.naturalWidth > 0) {
-            resolve()
-            return
-          }
-
-          // Ждем загрузки
-          let resolved = false
-          const timeout = setTimeout(() => {
-            if (!resolved) {
-              resolved = true
-              resolve() // Продолжаем даже если таймаут
-            }
-          }, maxWait)
-
-          const originalOnLoad = image.onload
-          const originalOnError = image.onerror
-
-          image.onload = () => {
-            if (!resolved) {
-              resolved = true
-              clearTimeout(timeout)
-              if (originalOnLoad) originalOnLoad.call(image, new Event('load'))
-              resolve()
-            }
-          }
-
-          image.onerror = () => {
-            if (!resolved) {
-              resolved = true
-              clearTimeout(timeout)
-              if (originalOnError) originalOnError.call(image, new ErrorEvent('error'))
-              resolve() // Продолжаем даже при ошибке
-            }
-          }
-        } else {
-          resolve()
-        }
-      })
-    })
-  ).then(() => {
-    // Дополнительная задержка для применения текстур в GPU
-    return new Promise<void>((resolve) => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          resolve()
-        })
-      })
-    })
-  })
-}
-
-const initSharedPreview = () => {
-  if (typeof window === 'undefined') return null
-  if (!sharedPreviewRenderer) {
-    try {
-      sharedPreviewRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true })
-      sharedPreviewRenderer.setPixelRatio(1) // Для превью достаточно 1х для скорости
-      sharedPreviewRenderer.setSize(120, 120)
-
-      sharedPreviewScene = new THREE.Scene()
-      // Улучшенное освещение: заполняющее + несколько направленных источников
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.8)
-      sharedPreviewScene.add(ambientLight)
-
-      const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0)
-      sharedPreviewScene.add(hemisphereLight)
-
-      const mainLight = new THREE.DirectionalLight(0xffffff, 1.2)
-      mainLight.position.set(5, 10, 7.5)
-      sharedPreviewScene.add(mainLight)
-
-      const fillLight = new THREE.DirectionalLight(0xffffff, 0.6)
-      fillLight.position.set(-5, 5, -5)
-      sharedPreviewScene.add(fillLight)
-
-      sharedPreviewCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000)
-      sharedPreviewCamera.position.set(4, 4, 4)
-      sharedPreviewCamera.lookAt(0, 0, 0)
-    } catch (e) {
-      console.error('Failed to init shared preview renderer:', e)
-      return null
-    }
-  }
-  return { renderer: sharedPreviewRenderer, scene: sharedPreviewScene!, camera: sharedPreviewCamera! }
-}
-
-function ModelPreview({ obj, mtl }: { obj: string; mtl: string }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [hasImage, setHasImage] = useState(false)
-  const previewIdRef = useRef<string>(`preview_${Date.now()}_${Math.random()}`)
-
-  useEffect(() => {
-    const shared = initSharedPreview()
-    if (!shared || !canvasRef.current) return
-
-    // Сбрасываем состояние при изменении модели
-    setHasImage(false)
-    const ctx = canvasRef.current.getContext('2d')
-    if (ctx) {
-      ctx.clearRect(0, 0, 120, 120)
-    }
-
-    let isMounted = true
-    const { renderer, scene, camera } = shared
-    const previewId = previewIdRef.current
-    let tempGroup: THREE.Group | null = null
-
-    modelLoader.loadModel(`${obj}_preview`, obj, mtl).then(model => {
-      if (!isMounted) return
-
-      const modelInstance = model.clone()
-
-      // Вычисляем bounding box модели
-      const box = new THREE.Box3().setFromObject(modelInstance)
-      const center = box.getCenter(new THREE.Vector3())
-      const size = box.getSize(new THREE.Vector3())
-
-      // Находим максимальный размер для пропорционального масштабирования
-      const maxDim = Math.max(size.x, size.y, size.z)
-      const scale = 3.8 / (maxDim || 1)
-
-      // Применяем одинаковый масштаб ко всем осям для сохранения пропорций
-      modelInstance.scale.set(scale, scale, scale)
-
-      // Центрируем модель после масштабирования
-      const scaledCenter = center.clone().multiplyScalar(scale)
-      modelInstance.position.sub(scaledCenter)
-
-      modelInstance.rotation.y = Math.PI / 2
-
-      // Добавляем в очередь рендеринга для последовательной обработки
-      renderQueue = renderQueue.then(() => {
-        return new Promise<void>((resolve) => {
-          if (!isMounted) {
-            resolve()
-            return
-          }
-
-          // Очищаем сцену от предыдущего превью этого компонента
-          const existingPreview = scene.getObjectByName(previewId)
-          if (existingPreview) {
-            scene.remove(existingPreview)
-          }
-
-          // Добавляем модель в сцену с уникальным именем
-          tempGroup = new THREE.Group()
-          tempGroup.name = previewId
-          tempGroup.add(modelInstance)
-          scene.add(tempGroup)
-
-          // Ждем загрузки всех текстур
-          waitForTexturesLoaded(modelInstance, 3000).then(() => {
-            if (!isMounted || !tempGroup) {
-              resolve()
-              return
-            }
-
-            // Рендерим один кадр
-            renderer.setClearColor(0x000000, 0)
-            renderer.render(scene, camera)
-
-            // Копируем результат на 2D канвас компонента с правильными пропорциями
-            const ctx = canvasRef.current?.getContext('2d')
-            if (ctx && canvasRef.current) {
-              // Очищаем канвас
-              ctx.clearRect(0, 0, 120, 120)
-
-              // Копируем изображение с сохранением пропорций
-              // WebGL рендерер имеет размер 120x120, поэтому просто копируем как есть
-              ctx.drawImage(
-                renderer.domElement,
-                0, 0, 120, 120,  // источник: x, y, width, height
-                0, 0, 120, 120   // назначение: x, y, width, height
-              )
-
-              if (isMounted) {
-                setHasImage(true)
-              }
-            }
-
-            // Убираем модель из общей сцены только после копирования
-            if (tempGroup) {
-              scene.remove(tempGroup)
-              tempGroup = null
-            }
-
-            resolve()
-          }).catch(() => {
-            // В случае ошибки все равно пытаемся отрендерить
-            if (!isMounted || !tempGroup) {
-              resolve()
-              return
-            }
-
-            renderer.setClearColor(0x000000, 0)
-            renderer.render(scene, camera)
-
-            const ctx = canvasRef.current?.getContext('2d')
-            if (ctx && canvasRef.current) {
-              ctx.clearRect(0, 0, 120, 120)
-              ctx.drawImage(renderer.domElement, 0, 0, 120, 120, 0, 0, 120, 120)
-              if (isMounted) {
-                setHasImage(true)
-              }
-            }
-
-            if (tempGroup) {
-              scene.remove(tempGroup)
-              tempGroup = null
-            }
-
-            resolve()
-          })
-        })
-      })
-    }).catch(err => console.error('Preview load error:', err))
-
-    return () => {
-      isMounted = false
-      // Удаляем модель из сцены при размонтировании
-      renderQueue = renderQueue.then(() => {
-        const existingPreview = scene.getObjectByName(previewId)
-        if (existingPreview) {
-          scene.remove(existingPreview)
-        }
-      })
-    }
-  }, [obj, mtl])
-
-  return (
-    <div className="relative w-full h-full overflow-hidden flex items-center justify-center">
-      {!hasImage && <div className="absolute inset-0 flex items-center justify-center"><Cube className="animate-spin text-muted-foreground/30" size={24} /></div>}
-      <canvas ref={canvasRef} width={120} height={120} className={cn("w-full h-full pointer-events-none transition-opacity duration-300", hasImage ? "opacity-100" : "opacity-0")} />
-    </div>
-  )
-}
 
 export default function MapEditor() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -457,75 +99,20 @@ export default function MapEditor() {
   const cameraAngleYRef = useRef(Math.PI / 4)
   const cameraTargetRef = useRef(new THREE.Vector3(0, 0, 0))
 
-  const [assetCategories, setAssetCategories] = useState<AssetCategory[]>([])
-  const [selectedCategory, setSelectedCategory] = useState<string>('')
-  const [selectedFolder, setSelectedFolder] = useState<string>('')
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [newMapDialogOpen, setNewMapDialogOpen] = useState(false)
   const [unsavedDataDialogOpen, setUnsavedDataDialogOpen] = useState(false)
   const [pendingAction, setPendingAction] = useState<'new' | 'load' | null>(null)
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false)
-  const [generateMapSize, setGenerateMapSize] = useState<MapSize>('tiny')
-  const [generatePrompt, setGeneratePrompt] = useState('')
-  const [generateBiome, setGenerateBiome] = useState<'plains' | 'water' | 'forest' | 'mountain'>('plains')
-  const [geminiApiKey, setGeminiApiKey] = useState('')
+  const [systemPromptDialogOpen, setSystemPromptDialogOpen] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
-
-  // Generation progress tracking
-  const [generationProgress, setGenerationProgress] = useState<{
-    stage: string
-    progress: number
-    thoughts: string
-    timeElapsed: number
-  } | null>(null)
 
   // Map state tracking
   const [mapName, setMapName] = useState<string>('')
   const [mapPath, setMapPath] = useState<string>('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
-  // Локальные модели для генерации
-  const [useLocalModel, setUseLocalModel] = useState(false)
-  const [localModelUrl, setLocalModelUrl] = useState('http://localhost:1234')
-  const [localModels, setLocalModels] = useState<Array<{ id: string; object: string; owned_by: string }>>([])
-  const [selectedLocalModel, setSelectedLocalModel] = useState<string>('')
-  const [loadingLocalModels, setLoadingLocalModels] = useState(false)
-
-  useEffect(() => {
-    const fetchAssets = async () => {
-      try {
-        const response = await fetch('/api/assets')
-        const data = await response.json()
-        setAssetCategories(data.categories)
-        if (data.categories.length > 0) {
-          const tiles = data.categories.find((c: any) => c.name === 'tiles')
-          if (tiles) {
-            setSelectedCategory('tiles')
-            if (tiles.folders.length > 0) setSelectedFolder(tiles.folders[0].name)
-          } else {
-            setSelectedCategory(data.categories[0].name)
-            setSelectedFolder(data.categories[0].folders[0].name)
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch assets:', error)
-      }
-    }
-    fetchAssets()
-  }, [])
-
-  useEffect(() => {
-    if (selectedCategory === 'tiles') {
-      setEditMode('terrain')
-    } else {
-      setEditMode('building')
-    }
-  }, [selectedCategory])
-
-  const currentCategory = assetCategories.find(c => c.name === selectedCategory)
-  const currentFolder = currentCategory?.folders.find(f => f.name === selectedFolder)
-  const availableModels = currentFolder?.models || []
 
   // Convert axial coordinates (q, r) to world coordinates for Three.js
   const hexToWorld = (q: number, r: number, mWidth?: number, mHeight?: number): [number, number] => {
@@ -535,48 +122,16 @@ export default function MapEditor() {
     return axialToWorld(q, r, width, height, hexSize)
   }
 
-  const createHexagonalGrid = (width: number, height: number, level: number): THREE.Group => {
-    const getHexPoints = (cx: number, cy: number, radius: number, rotation: number): THREE.Vector3[] => {
-      const points: THREE.Vector3[] = []
-      for (let i = 0; i < 6; i++) {
-        const angle = (i * 60 + rotation) * (Math.PI / 180)
-        const x = cx + radius * Math.cos(angle)
-        const y = cy + radius * Math.sin(angle)
-        points.push(new THREE.Vector3(x, 0, y))
-      }
-      return points
-    }
-
-    const group = new THREE.Group()
-    group.name = `__hexGrid_level_${level}`
-    const R = 2 / Math.sqrt(3)
-    const scale = 3.5
-    const LEVEL_HEIGHT = tileHeightRef.current || 0.7
-    const gridY = level * LEVEL_HEIGHT + 0.001
-
-    // Create grid using offset coordinates for rectangular initialization, then convert to axial
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        // Convert offset to axial for grid creation
-        const { q, r } = offsetToAxial(x, y)
-        if (mapRef.current && mapRef.current.isValidCoordinate(q, r)) {
-          const [worldX, worldZ] = hexToWorld(q, r, width, height)
-          const points = getHexPoints(worldX, worldZ, R * scale, 0)
-          const linePoints: THREE.Vector3[] = []
-          for (let i = 0; i < 6; i++) {
-            linePoints.push(points[i], points[(i + 1) % 6])
-          }
-          const geometry = new THREE.BufferGeometry().setFromPoints(linePoints)
-          const material = new THREE.LineBasicMaterial({ color: 0x444444, transparent: true, opacity: 0.3 })
-          const segments = new THREE.LineSegments(geometry, material)
-          segments.position.y = gridY
-          segments.name = `grid_${q}_${r}_level_${level}`
-          segments.renderOrder = -1
-          group.add(segments)
-        }
-      }
-    }
-    return group
+  const createHexagonalGridForEditor = (width: number, height: number, level: number): THREE.Group => {
+    if (!mapRef.current) return new THREE.Group()
+    return createHexagonalGrid({
+      width,
+      height,
+      level,
+      map: mapRef.current,
+      tileHeightRef,
+      hexToWorld
+    })
   }
 
   // Convert world coordinates to axial coordinates
@@ -604,75 +159,17 @@ export default function MapEditor() {
   }
 
 
-  const createHexMesh = async (hex: Hex): Promise<THREE.Group | null> => {
-    const [worldX, worldZ] = hexToWorld(hex.q, hex.r, mapRef.current?.width, mapRef.current?.height)
-    try {
-      const model = hex.modelData || selectedModel || availableModels[0]
-      if (model) {
-        // If hex didn't have modelData, save it now to ensure persistence
-        if (!hex.modelData) hex.modelData = model
-
-        const key = `terrain_${hex.terrain}_${model.name}_${hex.q}_${hex.r}`
-
-        // Try to get from cache synchronously first
-        let loadedModel = modelLoader.getCachedModel(key)
-
-        // If not in cache, wait for it
-        if (!loadedModel) {
-          loadedModel = await modelLoader.loadModel(key, model.obj, model.mtl)
-        }
-
-        if (loadedModel) {
-          const clone = loadedModel.clone()
-
-          // Important: we scale the group BEFORE measuring so we get the actual scaled height
-          clone.rotation.y = Math.PI / 2 + (hex.rotation || 0)
-          clone.scale.set(3.5, 3.5, 3.5)
-
-          // Measure tile height AFTER scaling to get actual scaled height
-          const realBox = new THREE.Box3().setFromObject(clone)
-          const actualHeight = realBox.max.y - realBox.min.y
-
-          // Calibrate LEVEL_HEIGHT constant from first model if not set
-          // LEVEL_HEIGHT is CONSTANT (height of base tile after scaling)
-          if (tileHeightRef.current === 1.0 && actualHeight > 0) {
-            tileHeightRef.current = actualHeight
-          }
-
-          // LEVEL_HEIGHT is CONSTANT (height of base tile)
-          const LEVEL_HEIGHT = tileHeightRef.current
-
-          // Position: each level stands on top of the previous level
-          // Level 0: Y = 0 - minY (bottom of tile at ground level)
-          // Level 1: Y = LEVEL_HEIGHT - minY (bottom of tile at top of level 0)
-          // Level 2: Y = 2 * LEVEL_HEIGHT - minY (bottom of tile at top of level 1)
-          const minY = realBox.min.y
-          const levelBaseY = (hex.height || 0) * LEVEL_HEIGHT
-          clone.position.set(worldX, levelBaseY - minY, worldZ)
-
-          clone.traverse((child) => {
-            if (child instanceof THREE.Mesh) {
-              child.castShadow = true
-              child.receiveShadow = true
-            }
-          })
-
-          // Update individual grid height
-          const gridGroup = sceneRef.current?.getObjectByName(`__hexGrid_level_${hex.height || 0}`)
-          const grid = gridGroup?.getObjectByName(`grid_${hex.q}_${hex.r}_level_${hex.height || 0}`)
-          if (grid) {
-            const LEVEL_HEIGHT = tileHeightRef.current
-            grid.position.y = (hex.height || 0) * LEVEL_HEIGHT + 0.001
-            grid.visible = true // Grid is always visible under tiles
-          }
-
-          return clone
-        }
-      }
-    } catch (error) {
-      console.warn(`Failed to load model for hex ${hex.q},${hex.r}:`, error)
-    }
-    return null
+  const createHexMeshForEditor = async (hex: Hex): Promise<THREE.Group | null> => {
+    if (!mapRef.current) return null
+    return createHexMesh({
+      hex,
+      map: mapRef.current,
+      selectedModel,
+      availableModels: undefined, // No longer needed - hex.modelData or selectedModel is used
+      scene: sceneRef.current,
+      tileHeightRef,
+      hexToWorld
+    })
   }
 
   const handleInitializeMap = async () => {
@@ -688,12 +185,8 @@ export default function MapEditor() {
     const mapDimensions = MAP_SIZES[mapSize]
     const map = new GameMap(mapDimensions.width, mapDimensions.height)
 
-    // Determine terrain type based on current selection
-    let terrain: TerrainType = TERRAIN_TYPES.PLAINS
-    if (selectedFolder === 'roads') terrain = TERRAIN_TYPES.ROAD
-    else if (selectedFolder === 'coast') terrain = TERRAIN_TYPES.WATER
-    else if (selectedFolder === 'forest') terrain = TERRAIN_TYPES.FOREST
-    else if (selectedFolder === 'mountains') terrain = TERRAIN_TYPES.MOUNTAIN
+    // Use default terrain type (can be overridden by model data)
+    const terrain: TerrainType = TERRAIN_TYPES.PLAINS
 
     // Initialize using offset coordinates, then convert to axial
     for (let y = 0; y < mapDimensions.height; y++) {
@@ -722,12 +215,8 @@ export default function MapEditor() {
     const mapDimensions = MAP_SIZES[newMapSize]
     const map = new GameMap(mapDimensions.width, mapDimensions.height)
 
-    // Determine terrain type based on current selection
-    let terrain: TerrainType = TERRAIN_TYPES.PLAINS
-    if (selectedFolder === 'roads') terrain = TERRAIN_TYPES.ROAD
-    else if (selectedFolder === 'coast') terrain = TERRAIN_TYPES.WATER
-    else if (selectedFolder === 'forest') terrain = TERRAIN_TYPES.FOREST
-    else if (selectedFolder === 'mountains') terrain = TERRAIN_TYPES.MOUNTAIN
+    // Use default terrain type (can be overridden by model data)
+    const terrain: TerrainType = TERRAIN_TYPES.PLAINS
 
     // Initialize using offset coordinates, then convert to axial
     // Fill the bottom level (height = 0) with the selected tile
@@ -953,104 +442,45 @@ export default function MapEditor() {
     setGenerateDialogOpen(true)
   }
 
-  // Загрузка локальных моделей
-  const loadLocalModels = async () => {
-    setLoadingLocalModels(true)
+  const handleGenerateMapConfirm = async (params: {
+    prompt: string
+    size: MapSize
+    biome: 'plains' | 'water' | 'forest' | 'mountain'
+    geminiApiKey?: string
+    useLocalModel?: boolean
+    localModelUrl?: string
+    selectedLocalModel?: string
+  }) => {
     try {
-      const url = `${localModelUrl}/v1/models`
-      const response = await fetch(url)
-      const text = await response.text()
-      let data: any
-
-      try {
-        data = JSON.parse(text)
-      } catch {
-        data = { raw: text }
-      }
-
-      if (!response.ok) {
-        showNotification('error', data.error || data.message || `Failed to load models: HTTP ${response.status}`)
-        return
-      }
-
-      const models = data.data || data.models || []
-      setLocalModels(models)
-
-      if (models.length > 0 && !selectedLocalModel) {
-        setSelectedLocalModel(models[0].id)
-      }
-    } catch (err) {
-      showNotification('error', err instanceof Error ? err.message : String(err))
-    } finally {
-      setLoadingLocalModels(false)
-    }
-  }
-
-  const confirmGenerateMap = async () => {
-    try {
-      if (!generatePrompt.trim()) {
-        showNotification('error', 'Please enter a generation prompt')
-        return
-      }
-
-      // Проверяем наличие API ключа для Gemini
-      if (!useLocalModel && !geminiApiKey.trim()) {
-        showNotification('error', 'Please enter your Gemini API key')
-        return
-      }
-
-      // Проверяем настройки локальной модели
-      if (useLocalModel && (!localModelUrl.trim() || !selectedLocalModel)) {
-        showNotification('error', 'Please configure local model settings')
-        return
-      }
-
       setIsGenerating(true)
       setLoadingText('Generating map via LLM...')
       setIsLoading(true)
-      setGenerationProgress({
-        stage: 'Initializing...',
-        progress: 0,
-        thoughts: '',
-        timeElapsed: 0
-      })
 
-      const mapDimensions = MAP_SIZES[generateMapSize]
+      const mapDimensions = MAP_SIZES[params.size]
 
       // Call API to generate map (returns serialized map format)
       const requestBody: any = {
         width: mapDimensions.width,
         height: mapDimensions.height,
-        prompt: generatePrompt.trim(),
-        biome: generateBiome,
+        prompt: params.prompt,
+        biome: params.biome,
         returnFormat: 'serialized',
-        stream: true, // Enable streaming for both Gemini and local models
+        stream: false, // Disable streaming - just wait for final result
       }
 
       // Добавляем параметры локальной модели, если используется
-      if (useLocalModel) {
+      if (params.useLocalModel && params.localModelUrl && params.selectedLocalModel) {
         requestBody.useLocalModel = true
-        requestBody.localUrl = localModelUrl
-        requestBody.model = selectedLocalModel || localModels[0]?.id
-      } else {
+        requestBody.localUrl = params.localModelUrl
+        requestBody.model = params.selectedLocalModel
+      } else if (params.geminiApiKey) {
         // Добавляем API ключ Gemini
-        requestBody.geminiApiKey = geminiApiKey.trim()
+        requestBody.geminiApiKey = params.geminiApiKey
       }
 
-      // Increase timeout for local models and Gemini (may take longer to generate)
-      const timeout = useLocalModel ? 600000 : 300000 // 10 minutes for local, 5 minutes for Gemini
+      // Increase timeout for local models (10 minutes), Gemini (5 minutes)
+      const timeout = params.useLocalModel ? 600000 : 300000
       const controller = new AbortController()
-
-      // Start progress tracking
-      const startTime = Date.now()
-      const progressInterval = setInterval(() => {
-        if (generationProgress) {
-          setGenerationProgress(prev => prev ? {
-            ...prev,
-            timeElapsed: Math.floor((Date.now() - startTime) / 1000)
-          } : null)
-        }
-      }, 1000)
       const timeoutId = setTimeout(() => controller.abort(), timeout)
 
       const response = await fetch('/api/llm/generate-map', {
@@ -1060,7 +490,6 @@ export default function MapEditor() {
         signal: controller.signal,
       }).finally(() => {
         clearTimeout(timeoutId)
-        clearInterval(progressInterval)
       })
 
       if (!response.ok) {
@@ -1074,133 +503,21 @@ export default function MapEditor() {
         throw new Error(errorData.error || 'Map generation error')
       }
 
-      // Check if response is streaming (for debug data)
-      const contentType = response.headers.get('content-type')
+      // Handle JSON response
       let data: any
-
-      if (contentType?.includes('text/plain') || contentType?.includes('text/event-stream')) {
-        // Handle streaming response with debug data
-        const reader = response.body?.getReader()
-        const decoder = new TextDecoder()
-        let buffer = ''
-        let finalData: any = null
-
-        if (reader) {
-          try {
-            while (true) {
-              const { done, value } = await reader.read()
-              if (done) break
-
-              buffer += decoder.decode(value, { stream: true })
-              const lines = buffer.split('\n')
-              buffer = lines.pop() || '' // Keep incomplete line in buffer
-
-              for (const line of lines) {
-                if (line.trim()) {
-                  console.log('Streaming line:', line) // Debug log
-
-                  // Parse debug data
-                  if (line.includes('Prompt processing progress')) {
-                    const match = line.match(/(\d+)%/)
-                    if (match) {
-                      setGenerationProgress(prev => prev ? {
-                        ...prev,
-                        stage: 'Processing prompt...',
-                        progress: parseInt(match[1])
-                      } : null)
-                    }
-                  } else if (line.includes('Thought for')) {
-                    const match = line.match(/Thought for (\d+) seconds/)
-                    if (match) {
-                      setGenerationProgress(prev => prev ? {
-                        ...prev,
-                        stage: 'Thinking...',
-                        progress: Math.min(prev.progress + 10, 90)
-                      } : null)
-                    }
-                  } else if (line.trim().startsWith('{') || (line.includes('success') && (line.includes('mapData') || line.includes('hexes')))) {
-                    // Final JSON response (more flexible detection)
-                    try {
-                      const jsonLine = line.trim()
-                      finalData = JSON.parse(jsonLine)
-                      console.log('Parsed final JSON:', finalData) // Debug log
-                    } catch (e) {
-                      console.warn('Failed to parse final JSON:', e, 'Line:', line)
-                      // Try to extract JSON from the line if it's embedded
-                      const jsonMatch = line.match(/\{.*\}/)
-                      if (jsonMatch) {
-                        try {
-                          finalData = JSON.parse(jsonMatch[0])
-                          console.log('Extracted and parsed JSON:', finalData)
-                        } catch (e2) {
-                          console.warn('Failed to extract JSON:', e2)
-                        }
-                      }
-                    }
-                  } else if (line.includes('Error:')) {
-                    // Error message
-                    setGenerationProgress(prev => prev ? {
-                      ...prev,
-                      stage: 'Error occurred',
-                      thoughts: line.replace('Error:', '').trim()
-                    } : null)
-                  } else if (line.includes('completed successfully')) {
-                    setGenerationProgress(prev => prev ? {
-                      ...prev,
-                      stage: 'Completed!',
-                      progress: 100
-                    } : null)
-                  } else if (!line.startsWith('{') && line.length > 5) {
-                    // Thoughts/reasoning (any non-JSON line that's not too short)
-                    setGenerationProgress(prev => prev ? {
-                      ...prev,
-                      thoughts: line.trim()
-                    } : null)
-                  }
-                }
-              }
-            }
-          } finally {
-            reader.releaseLock()
-          }
-        }
-
-        if (!finalData) {
-          console.warn('No final response received from streaming API, trying fallback...')
-          // Fallback: try to make a regular non-streaming request
-          const fallbackRequestBody = { ...requestBody, stream: false }
-          const fallbackResponse = await fetch('/api/llm/generate-map', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(fallbackRequestBody),
-            signal: controller.signal,
-          })
-
-          if (!fallbackResponse.ok) {
-            throw new Error(`Fallback request failed: ${fallbackResponse.status} ${fallbackResponse.statusText}`)
-          }
-
-          finalData = await fallbackResponse.json()
-          console.log('Fallback response received:', finalData)
-        }
-        data = finalData
-      } else {
-        // Handle regular JSON response
-        try {
-          data = await response.json()
-        } catch (e) {
-          const text = await response.text()
-          throw new Error(`Failed to parse response: ${e instanceof Error ? e.message : String(e)}\nResponse: ${text.substring(0, 500)}`)
-        }
+      try {
+        data = await response.json()
+      } catch (e) {
+        const text = await response.text()
+        throw new Error(`Failed to parse response: ${e instanceof Error ? e.message : String(e)}\nResponse: ${text.substring(0, 500)}`)
       }
 
       if (!data.success || !data.mapData) {
         throw new Error('Invalid API response format')
       }
 
-      // Close dialog and clear progress
+      // Close dialog
       setGenerateDialogOpen(false)
-      setGenerationProgress(null)
 
       setLoadingText('Loading map...')
 
@@ -1255,14 +572,13 @@ export default function MapEditor() {
       console.error('Failed to generate map:', error)
       setIsLoading(false)
       setIsGenerating(false)
-      setGenerationProgress(null) // Clear progress on error
 
       let errorMessage = error instanceof Error ? error.message : String(error)
 
       // Специальная обработка для timeout
       if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('fetch failed'))) {
-        if (useLocalModel) {
-          errorMessage = 'Generation interrupted due to timeout. Local models may take a long time to generate (5-10 minutes). Try reducing map size or wait longer.'
+        if (params.useLocalModel) {
+          errorMessage = 'Generation interrupted due to timeout. Local models may take up to 10 minutes to generate. Try reducing map size or wait longer.'
         } else {
           errorMessage = 'Generation interrupted due to timeout. Please try again.'
         }
@@ -1408,7 +724,7 @@ export default function MapEditor() {
         hexStack.forEach(hex => {
           hexCount++
           const promise = (async () => {
-            const mesh = await createHexMesh(hex)
+            const mesh = await createHexMeshForEditor(hex)
             if (mesh && sceneRef.current) {
               sceneRef.current.add(mesh)
               hexMeshesRef.current.set(`${hex.q},${hex.r}_${hex.height}`, mesh as any)
@@ -1443,7 +759,7 @@ export default function MapEditor() {
       }
 
       // Create new mesh
-      const model = hex.modelData || selectedModel || availableModels[0]
+      const model = hex.modelData || selectedModel
 
       if (model) {
         if (!hex.modelData) hex.modelData = model
@@ -1476,7 +792,7 @@ export default function MapEditor() {
           }
         } else {
           // Load asynchronously if not cached
-          const mesh = await createHexMesh(hex)
+          const mesh = await createHexMeshForEditor(hex)
           if (mesh && sceneRef.current) {
             sceneRef.current.add(mesh)
             hexMeshesRef.current.set(hexKey, mesh as any)
@@ -1980,7 +1296,7 @@ export default function MapEditor() {
       // Add hexagonal grids for all levels (initially only current level visible)
       const gridMapDimensions = MAP_SIZES[mapSize]
       for (let level = 0; level <= 4; level++) {
-        const hexGrid = createHexagonalGrid(gridMapDimensions.width, gridMapDimensions.height, level)
+        const hexGrid = createHexagonalGridForEditor(gridMapDimensions.width, gridMapDimensions.height, level)
         hexGrid.visible = (level === currentHeightLevel)
         scene.add(hexGrid)
       }
@@ -2168,7 +1484,7 @@ export default function MapEditor() {
               saveHistoryState()
               hex.height = newHeight
               mapRef.current.removeHex(hex.q, hex.r, oldHeight)
-              mapRef.current.addHex(hex)
+              mapRef.current.setHex(hex.q, hex.r, hex)
               await buildMap()
               // Move selection mesh to new height
               requestAnimationFrame(() => {
@@ -2184,7 +1500,7 @@ export default function MapEditor() {
               saveHistoryState()
               hex.height = newHeight
               mapRef.current.removeHex(hex.q, hex.r, oldHeight)
-              mapRef.current.addHex(hex)
+              mapRef.current.setHex(hex.q, hex.r, hex)
               await buildMap()
               // Move selection mesh to new height
               requestAnimationFrame(() => {
@@ -2275,51 +1591,6 @@ export default function MapEditor() {
 
 
   // Функция для создания меша выделения
-  const createSelectionMesh = (): THREE.Mesh => {
-    const scale = 3.5
-    const R = 2 / Math.sqrt(3)
-    const outerR = R * scale * 1.05
-    const innerR = R * scale * 0.95
-
-    const selectionShape = new THREE.Shape()
-    for (let i = 0; i < 6; i++) {
-      const angle = (i * 60) * (Math.PI / 180)
-      const x = outerR * Math.cos(angle)
-      const y = outerR * Math.sin(angle)
-      if (i === 0) selectionShape.moveTo(x, y)
-      else selectionShape.lineTo(x, y)
-    }
-    selectionShape.closePath()
-
-    const selectionHole = new THREE.Path()
-    for (let i = 0; i < 6; i++) {
-      const angle = (i * 60) * (Math.PI / 180)
-      const x = innerR * Math.cos(angle)
-      const y = innerR * Math.sin(angle)
-      if (i === 0) selectionHole.moveTo(x, y)
-      else selectionHole.lineTo(x, y)
-    }
-    selectionHole.closePath()
-    selectionShape.holes.push(selectionHole)
-
-    const selectionGeom = new THREE.ShapeGeometry(selectionShape)
-    selectionGeom.rotateX(-Math.PI / 2)
-    selectionGeom.rotateY(Math.PI / 2)
-
-    const selectionMat = new THREE.MeshBasicMaterial({
-      color: 0x00ffff, // Bright Cyan (Primary)
-      transparent: true,
-      opacity: 0.8,
-      side: THREE.DoubleSide,
-      depthTest: false,
-      depthWrite: false
-    })
-    const sMesh = new THREE.Mesh(selectionGeom, selectionMat)
-    sMesh.name = '__selectionHighlight'
-    sMesh.renderOrder = 2000
-    sMesh.visible = false
-    return sMesh
-  }
 
   // Selection Highlight Update Effect
   useEffect(() => {
@@ -2590,295 +1861,53 @@ export default function MapEditor() {
 
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden text-foreground selection:bg-primary/20">
-      <aside className="w-80 border-r border-border bg-card/50 backdrop-blur-md flex flex-col z-20">
-        <div className="p-6 border-b border-border bg-card/80">
-          <h1 className="text-xl font-bold tracking-tight flex flex-col items-center justify-center gap-2">
-            <div className="flex items-center justify-center gap-3">
-              <div className="w-6 h-6 overflow-visible flex items-center justify-center">
-                <div style={{ transform: 'scale(4)' }}>
-                  <ModelPreview obj="/assets/terrain/buildings/blue/building_home_B_blue.obj" mtl="/assets/terrain/buildings/blue/building_home_B_blue.mtl" />
-                </div>
-              </div>
-              <div className="flex flex-col items-start ml-[20px]">
-                <span>Medieval Hexagon Map</span>
-                <span>Editor</span>
-              </div>
-            </div>
-          </h1>
-        </div>
-        <ScrollArea className="flex-1">
-          <div className="p-4 flex flex-col h-full gap-6 min-h-0">
-            <section className="space-y-4">
-              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Assets</Label>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {assetCategories.map(c => <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={selectedFolder} onValueChange={setSelectedFolder}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {currentCategory?.folders.map(f => <SelectItem key={f.name} value={f.name}>{f.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <div className="grid grid-cols-2 gap-2 h-full content-start">
-                {availableModels.map((m, i) => (
-                  <div
-                    key={i}
-                    draggable={true}
-                    onDragStart={() => {
-                      draggedModelRef.current = m
-                      setSelectedModel(m)
-                    }}
-                    onClick={() => setSelectedModel(m)}
-                    className={cn("p-1 rounded-xl border-2 transition-all cursor-pointer group hover:bg-muted/30", selectedModel?.name === m.name ? "border-primary bg-primary/5" : "border-transparent bg-muted/10")}
-                  >
-                    <div className="aspect-square w-full">
-                      <ModelPreview obj={m.obj} mtl={m.mtl} />
-                    </div>
-                    <p className="text-[11px] font-bold text-center mt-1 truncate px-1 py-1 uppercase tracking-tight">{m.name}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </div>
-        </ScrollArea>
-        <div className="p-4 border-t border-border flex flex-col gap-2">
-          <Button
-            className="w-full font-bold shadow-lg shadow-primary/20 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600"
-            onClick={handleGenerateMap}
-            disabled={isGenerating}
-          >
-            <Sparkle size={16} className="mr-2" />
-            {isGenerating ? 'Generating...' : 'Generate Map (AI)'}
-          </Button>
-        </div>
+      <AssetPanel
+        selectedModel={selectedModel}
+        onSelectModel={setSelectedModel}
+        onDragStart={(model) => {
+          draggedModelRef.current = model
+          setSelectedModel(model)
+        }}
+        onGenerateMap={handleGenerateMap}
+        isGenerating={isGenerating}
+      />
 
-        {/* Save Map Dialog */}
-        <SaveMapDialog
-          open={saveDialogOpen}
-          onOpenChange={setSaveDialogOpen}
-          onSave={handleSaveMapConfirm}
-        />
+      {/* Save Map Dialog */}
+      <SaveMapDialog
+        open={saveDialogOpen}
+        onOpenChange={setSaveDialogOpen}
+        onSave={handleSaveMapConfirm}
+      />
 
-        {/* New Map Dialog */}
-        <NewMapDialog
-          open={newMapDialogOpen}
-          onOpenChange={setNewMapDialogOpen}
-          onConfirm={handleNewMapConfirm}
-        />
+      {/* New Map Dialog */}
+      <NewMapDialog
+        open={newMapDialogOpen}
+        onOpenChange={setNewMapDialogOpen}
+        onConfirm={handleNewMapConfirm}
+      />
 
-        {/* Unsaved Data Dialog */}
-        <UnsavedDataDialog
-          open={unsavedDataDialogOpen}
-          onOpenChange={setUnsavedDataDialogOpen}
-          onSave={handleUnsavedDataSave}
-          onDiscard={handleUnsavedDataDiscard}
-        />
+      {/* Unsaved Data Dialog */}
+      <UnsavedDataDialog
+        open={unsavedDataDialogOpen}
+        onOpenChange={setUnsavedDataDialogOpen}
+        onSave={handleUnsavedDataSave}
+        onDiscard={handleUnsavedDataDiscard}
+      />
 
-        {/* Generate Map Dialog */}
-        <Dialog open={generateDialogOpen} onOpenChange={setGenerateDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Sparkle size={20} className="text-cyan-400" />
-                Generate Map (AI)
-              </DialogTitle>
-              <DialogDescription>
-                Describe the map you want to generate
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4 space-y-4">
-              {/* Переключатель между Gemini и локальными моделями */}
-              <div className="space-y-2">
-                <Label>LLM Provider</Label>
-                <Tabs value={useLocalModel ? 'local' : 'gemini'} onValueChange={(v) => setUseLocalModel(v === 'local')}>
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="gemini">Gemini API</TabsTrigger>
-                    <TabsTrigger value="local">Local Server</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
+      {/* System Prompt Dialog */}
+      <SystemPromptDialog
+        open={systemPromptDialogOpen}
+        onOpenChange={setSystemPromptDialogOpen}
+      />
 
-              {/* Gemini API settings */}
-              {!useLocalModel && (
-                <div className="space-y-3 p-4 bg-cyan-500/10 border border-cyan-500/20 rounded-lg">
-                  <div className="space-y-2">
-                    <Label htmlFor="gemini-api-key">Gemini API Key</Label>
-                    <Input
-                      id="gemini-api-key"
-                      type="password"
-                      value={geminiApiKey}
-                      onChange={(e) => setGeminiApiKey(e.target.value)}
-                      placeholder="AIzaSy..."
-                      className="font-mono text-sm"
-                    />
-                    <p className="text-xs text-cyan-400">
-                      Get your API key from{' '}
-                      <a
-                        href="https://aistudio.google.com/app/apikey"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline hover:text-cyan-300"
-                      >
-                        Google AI Studio
-                      </a>
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Local server settings */}
-              {useLocalModel && (
-                <div className="space-y-3 p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-                  <div className="space-y-2">
-                    <Label htmlFor="local-model-url">Local Server URL</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="local-model-url"
-                        value={localModelUrl}
-                        onChange={(e) => setLocalModelUrl(e.target.value)}
-                        placeholder="http://localhost:1234"
-                        className="flex-1"
-                      />
-                      <Button
-                        onClick={loadLocalModels}
-                        disabled={loadingLocalModels || isGenerating}
-                        variant="outline"
-                        size="sm"
-                      >
-                        {loadingLocalModels ? '...' : 'Load'}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {localModels.length > 0 && (
-                    <div className="space-y-2">
-                      <Label htmlFor="local-model-select">Model</Label>
-                      <Select value={selectedLocalModel} onValueChange={setSelectedLocalModel}>
-                        <SelectTrigger id="local-model-select">
-                          <SelectValue placeholder="Select model" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {localModels.map((model) => (
-                            <SelectItem key={model.id} value={model.id}>
-                              {model.id}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {localModels.length === 0 && !loadingLocalModels && (
-                    <p className="text-xs text-purple-400">
-                      Click "Load" to fetch available models
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="generate-prompt">Description</Label>
-                <Textarea
-                  id="generate-prompt"
-                  value={generatePrompt}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setGeneratePrompt(e.target.value)}
-                  placeholder="e.g., A peaceful village with a river flowing through it, surrounded by forests"
-                  rows={4}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="generate-size">Map Size</Label>
-                <Select value={generateMapSize} onValueChange={(value) => setGenerateMapSize(value as MapSize)}>
-                  <SelectTrigger id="generate-size">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(MAP_SIZES).map(([key, { label, width, height }]) => (
-                      <SelectItem key={key} value={key}>
-                        {label} ({width}×{height})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="generate-biome">Primary Biome</Label>
-                <Select value={generateBiome} onValueChange={(value) => setGenerateBiome(value as typeof generateBiome)}>
-                  <SelectTrigger id="generate-biome">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="plains">Plains</SelectItem>
-                    <SelectItem value="forest">Forest</SelectItem>
-                    <SelectItem value="mountain">Mountain</SelectItem>
-                    <SelectItem value="water">Water</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Progress display during generation */}
-              {isGenerating && generationProgress ? (
-                <div className="space-y-3 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">{generationProgress.stage}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {generationProgress.timeElapsed}s elapsed
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${generationProgress.progress}%` }}
-                      />
-                    </div>
-                    {generationProgress.progress > 0 && (
-                      <span className="text-xs text-blue-400">{generationProgress.progress}%</span>
-                    )}
-                  </div>
-
-                  {generationProgress.thoughts && (
-                    <div className="mt-3 p-3 bg-gray-800/50 rounded border-l-4 border-blue-500">
-                      <p className="text-xs text-gray-300 font-mono leading-relaxed">
-                        {generationProgress.thoughts}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ) : !isGenerating ? (
-                <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
-                  <p className="font-semibold mb-1">Note:</p>
-                  {useLocalModel ? (
-                    <p>Local models may take 5-10 minutes to generate a map depending on size. The current map will be replaced.</p>
-                  ) : (
-                    <p>Generation may take up to 5 minutes. The current map will be replaced.</p>
-                  )}
-                </div>
-              ) : null}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setGenerateDialogOpen(false)} disabled={isGenerating}>
-                Cancel
-              </Button>
-              <Button
-                onClick={confirmGenerateMap}
-                disabled={
-                  isGenerating ||
-                  !generatePrompt.trim() ||
-                  (!useLocalModel && !geminiApiKey.trim()) ||
-                  (useLocalModel && (!selectedLocalModel && localModels.length > 0))
-                }
-              >
-                {isGenerating ? 'Generating...' : 'Generate'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-      </aside>
+      {/* Generate Map Dialog */}
+      <GenerateMapDialog
+        open={generateDialogOpen}
+        onOpenChange={setGenerateDialogOpen}
+        onGenerate={handleGenerateMapConfirm}
+        isGenerating={isGenerating}
+        onError={(message) => showNotification('error', message)}
+      />
 
       <main className="flex-1 relative flex flex-col overflow-hidden bg-[#050505]" ref={containerRef}>
         {/* TOP LEFT: FILE MENU */}
@@ -2912,6 +1941,13 @@ export default function MapEditor() {
               >
                 <span>Save...</span>
                 <span className="text-xs text-muted-foreground">Ctrl+S</span>
+              </div>
+              <Separator />
+              <div
+                onClick={() => setSystemPromptDialogOpen(true)}
+                className="flex items-center justify-between px-2 py-2 rounded cursor-pointer hover:bg-primary/10 transition-colors"
+              >
+                <span>System Prompt...</span>
               </div>
             </div>
           </PopoverContent>
@@ -3202,49 +2238,30 @@ export default function MapEditor() {
                 const { q, r } = targetCoords
                 setSelectedModel(draggedModelRef.current)
 
-                if (selectedCategory === 'tiles') {
-                  let t = selectedTerrain
-                  if (selectedFolder === 'roads') t = TERRAIN_TYPES.ROAD
-                  else if (selectedFolder === 'coast') t = TERRAIN_TYPES.WATER
+                // Use default terrain type
+                const t = TERRAIN_TYPES.PLAINS
 
-                  // Validate coordinates before proceeding
-                  if (!Number.isFinite(q) || !Number.isFinite(r)) {
-                    console.error('Invalid coordinates from drop:', q, r)
-                    return
-                  }
+                // Validate coordinates before proceeding
+                if (!Number.isFinite(q) || !Number.isFinite(r)) {
+                  console.error('Invalid coordinates from drop:', q, r)
+                  return
+                }
 
-                  // Find next available level starting from current global level
-                  let targetLevel = currentHeightLevel
-                  while (targetLevel <= 4 && mapRef.current.hasHex(q, r, targetLevel)) {
-                    targetLevel++
-                  }
+                // Find next available level starting from current global level
+                let targetLevel = currentHeightLevel
+                while (targetLevel <= 4 && mapRef.current.hasHex(q, r, targetLevel)) {
+                  targetLevel++
+                }
 
-                  // Only place if we found a free level
-                  if (targetLevel <= 4) {
-                    const h = new Hex(q, r, t)
-                    h.modelData = draggedModelRef.current
-                    h.height = targetLevel
-                    mapRef.current.setHex(q, r, h)
-                    await updateHexMesh(q, r, targetLevel)
-                    // Отмечаем изменения
-                    setHasUnsavedChanges(true)
-                  }
-                } else {
-                  // For buildings, same logic
-                  let targetLevel = currentHeightLevel
-                  while (targetLevel <= 4 && mapRef.current.hasHex(q, r, targetLevel)) {
-                    targetLevel++
-                  }
-
-                  if (targetLevel <= 4) {
-                    const h = new Hex(q, r, TERRAIN_TYPES.PLAINS)
-                    h.modelData = draggedModelRef.current
-                    h.height = targetLevel
-                    mapRef.current.setHex(q, r, h)
-                    await updateHexMesh(q, r, targetLevel)
-                    // Отмечаем изменения
-                    setHasUnsavedChanges(true)
-                  }
+                // Only place if we found a free level
+                if (targetLevel <= 4) {
+                  const h = new Hex(q, r, t)
+                  h.modelData = draggedModelRef.current
+                  h.height = targetLevel
+                  mapRef.current.setHex(q, r, h)
+                  await updateHexMesh(q, r, targetLevel)
+                  // Отмечаем изменения
+                  setHasUnsavedChanges(true)
                 }
               }
               draggedModelRef.current = null

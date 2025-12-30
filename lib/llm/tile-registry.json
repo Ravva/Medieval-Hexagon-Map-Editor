@@ -1,6 +1,6 @@
 {
-  "version": "1.0",
-  "generatedAt": "2025-12-29T18:01:18.239Z",
+  "version": "1.1",
+  "generatedAt": "2025-12-30T15:50:16.351Z",
   "totalTiles": 263,
   "tiles": [
     {
@@ -27,7 +27,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_barracks_blue",
@@ -53,7 +54,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_blacksmith_blue",
@@ -79,7 +81,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_castle_blue",
@@ -107,7 +110,8 @@
         "landmark"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_church_blue",
@@ -133,7 +137,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_home_A_blue",
@@ -159,7 +164,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_home_B_blue",
@@ -185,7 +191,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_lumbermill_blue",
@@ -211,7 +218,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_lumbermill_blue_building_lumbermill_saw_blue",
@@ -237,7 +245,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_lumbermill_blue_building_lumbermill_top_blue",
@@ -263,7 +272,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_market_blue",
@@ -289,7 +299,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_mine_blue",
@@ -315,7 +326,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_tavern_blue",
@@ -341,7 +353,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_tower_A_blue",
@@ -368,7 +381,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_tower_A_blue_building_tower_A_top_blue",
@@ -395,7 +409,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_tower_B_blue",
@@ -422,7 +437,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_tower_B_blue_building_tower_B_top_blue",
@@ -449,7 +465,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_tower_base_blue",
@@ -476,7 +493,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_tower_catapult_blue",
@@ -503,7 +521,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_tower_catapult_blue_catapult_turret_blue",
@@ -530,7 +549,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_tower_catapult_blue_catapult_turret_blue_catapult_arm_blue",
@@ -557,7 +577,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_watermill_blue",
@@ -584,7 +605,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_watermill_blue_building_watermill_wheel_blue",
@@ -611,7 +633,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_well_blue",
@@ -637,7 +660,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_windmill_blue",
@@ -663,7 +687,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_windmill_blue_building_windmill_top_blue",
@@ -689,7 +714,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_blue_building_windmill_blue_building_windmill_top_blue_building_windmill_top_fan_blue",
@@ -715,7 +741,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_archeryrange_green",
@@ -741,7 +768,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_barracks_green",
@@ -767,7 +795,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_blacksmith_green",
@@ -793,7 +822,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_castle_green",
@@ -821,7 +851,8 @@
         "landmark"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_church_green",
@@ -847,7 +878,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_home_A_green",
@@ -873,7 +905,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_home_B_green",
@@ -899,7 +932,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_lumbermill_green",
@@ -925,7 +959,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_lumbermill_green_building_lumbermill_saw_green",
@@ -951,7 +986,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_lumbermill_green_building_lumbermill_top_green",
@@ -977,7 +1013,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_market_green",
@@ -1003,7 +1040,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_mine_green",
@@ -1029,7 +1067,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_tavern_green",
@@ -1055,7 +1094,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_tower_A_green",
@@ -1082,7 +1122,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_tower_A_green_building_tower_A_top_green",
@@ -1109,7 +1150,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_tower_B_green",
@@ -1136,7 +1178,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_tower_B_green_building_tower_B_top_green",
@@ -1163,7 +1206,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_tower_base_green",
@@ -1190,7 +1234,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_tower_catapult_green",
@@ -1217,7 +1262,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_tower_catapult_green_catapult_turret_green",
@@ -1244,7 +1290,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_tower_catapult_green_catapult_turret_green_catapult_arm_green",
@@ -1271,7 +1318,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_watermill_green",
@@ -1298,7 +1346,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_watermill_green_building_watermill_wheel_green",
@@ -1325,7 +1374,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_well_green",
@@ -1351,7 +1401,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_windmill_green",
@@ -1377,7 +1428,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_windmill_green_building_windmill_top_green",
@@ -1403,7 +1455,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_green_building_windmill_green_building_windmill_top_green_building_windmill_top_fan_green",
@@ -1429,7 +1482,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_building_bridge_A",
@@ -1455,7 +1509,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_building_bridge_B",
@@ -1481,7 +1536,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_building_destroyed",
@@ -1507,7 +1563,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_building_dirt",
@@ -1533,7 +1590,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_building_grain",
@@ -1559,7 +1617,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_building_scaffolding",
@@ -1585,7 +1644,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_building_stage_A",
@@ -1611,7 +1671,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_building_stage_B",
@@ -1637,7 +1698,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_building_stage_C",
@@ -1663,7 +1725,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_fence_stone_straight",
@@ -1689,7 +1752,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_fence_stone_straight_gate",
@@ -1715,7 +1779,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_fence_stone_straight_gate_fence_stone_straight_door",
@@ -1741,7 +1806,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_fence_wood_straight",
@@ -1767,7 +1833,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_fence_wood_straight_gate",
@@ -1793,7 +1860,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_fence_wood_straight_gate_fence_wood_straight_door",
@@ -1819,7 +1887,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_projectile_catapult",
@@ -1845,7 +1914,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_wall_corner_A_gate",
@@ -1871,7 +1941,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_wall_corner_A_gate_door_left",
@@ -1897,7 +1968,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_wall_corner_A_gate_door_right",
@@ -1923,7 +1995,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_wall_corner_A_inside",
@@ -1949,7 +2022,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_wall_corner_A_outside",
@@ -1975,7 +2049,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_wall_corner_B_inside",
@@ -2001,7 +2076,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_wall_corner_B_outside",
@@ -2027,7 +2103,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_wall_straight",
@@ -2053,7 +2130,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_wall_straight_gate",
@@ -2079,7 +2157,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_wall_straight_gate_door_left",
@@ -2105,7 +2184,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_neutral_wall_straight_gate_door_right",
@@ -2131,7 +2211,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_archeryrange_red",
@@ -2157,7 +2238,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_barracks_red",
@@ -2183,7 +2265,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_blacksmith_red",
@@ -2209,7 +2292,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_castle_red",
@@ -2237,7 +2321,8 @@
         "landmark"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_church_red",
@@ -2263,7 +2348,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_home_A_red",
@@ -2289,7 +2375,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_home_B_red",
@@ -2315,7 +2402,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_lumbermill_red",
@@ -2341,7 +2429,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_lumbermill_red_building_lumbermill_saw_red",
@@ -2367,7 +2456,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_lumbermill_red_building_lumbermill_top_red",
@@ -2393,7 +2483,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_market_red",
@@ -2419,7 +2510,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_mine_red",
@@ -2445,7 +2537,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_tavern_red",
@@ -2471,7 +2564,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_tower_A_red",
@@ -2498,7 +2592,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_tower_A_red_building_tower_A_top_red",
@@ -2525,7 +2620,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_tower_B_red",
@@ -2552,7 +2648,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_tower_B_red_building_tower_B_top_red",
@@ -2579,7 +2676,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_tower_base_red",
@@ -2606,7 +2704,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_tower_catapult_red",
@@ -2633,7 +2732,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_tower_catapult_red_catapult_turret_red",
@@ -2660,7 +2760,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_tower_catapult_red_catapult_turret_red_catapult_arm_red",
@@ -2687,7 +2788,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_watermill_red",
@@ -2714,7 +2816,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_watermill_red_building_watermill_wheel_red",
@@ -2741,7 +2844,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_well_red",
@@ -2767,7 +2871,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_windmill_red",
@@ -2793,7 +2898,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_windmill_red_building_windmill_top_red",
@@ -2819,7 +2925,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_red_building_windmill_red_building_windmill_top_red_building_windmill_top_fan_red",
@@ -2845,7 +2952,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_archeryrange_yellow",
@@ -2871,7 +2979,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_barracks_yellow",
@@ -2897,7 +3006,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_blacksmith_yellow",
@@ -2923,7 +3033,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_castle_yellow",
@@ -2951,7 +3062,8 @@
         "landmark"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_church_yellow",
@@ -2977,7 +3089,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_home_A_yellow",
@@ -3003,7 +3116,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_home_B_yellow",
@@ -3029,7 +3143,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_lumbermill_yellow",
@@ -3055,7 +3170,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_lumbermill_yellow_building_lumbermill_saw_yellow",
@@ -3081,7 +3197,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_lumbermill_yellow_building_lumbermill_top_yellow",
@@ -3107,7 +3224,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_market_yellow",
@@ -3133,7 +3251,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_mine_yellow",
@@ -3159,7 +3278,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_tavern_yellow",
@@ -3185,7 +3305,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_tower_A_yellow",
@@ -3212,7 +3333,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_tower_A_yellow_building_tower_A_top_yellow",
@@ -3239,7 +3361,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_tower_B_yellow",
@@ -3266,7 +3389,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_tower_B_yellow_building_tower_B_top_yellow",
@@ -3293,7 +3417,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_tower_base_yellow",
@@ -3320,7 +3445,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_tower_catapult_yellow",
@@ -3347,7 +3473,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_tower_catapult_yellow_catapult_turret_yellow",
@@ -3374,7 +3501,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_tower_catapult_yellow_catapult_turret_yellow_catapult_arm_yellow",
@@ -3401,7 +3529,8 @@
         "defense"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_watermill_yellow",
@@ -3428,7 +3557,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_watermill_yellow_building_watermill_wheel_yellow",
@@ -3455,7 +3585,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_well_yellow",
@@ -3481,7 +3612,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_windmill_yellow",
@@ -3507,7 +3639,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_windmill_yellow_building_windmill_top_yellow",
@@ -3533,7 +3666,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "buildings_yellow_building_windmill_yellow_building_windmill_top_yellow_building_windmill_top_fan_yellow",
@@ -3559,7 +3693,8 @@
         "structure"
       ],
       "walkable": false,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_cloud_big",
@@ -3587,7 +3722,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_cloud_small",
@@ -3615,7 +3751,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_hill_single_A",
@@ -3644,7 +3781,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_hill_single_B",
@@ -3673,7 +3811,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_hill_single_C",
@@ -3702,7 +3841,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_hills_A",
@@ -3731,7 +3871,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_hills_A_trees",
@@ -3760,7 +3901,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_hills_B",
@@ -3789,7 +3931,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_hills_B_trees",
@@ -3818,7 +3961,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_hills_C",
@@ -3847,7 +3991,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_hills_C_trees",
@@ -3876,7 +4021,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_mountain_A",
@@ -3905,7 +4051,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_mountain_A_grass",
@@ -3934,7 +4081,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_mountain_A_grass_trees",
@@ -3963,7 +4111,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_mountain_B",
@@ -3992,7 +4141,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_mountain_B_grass",
@@ -4021,7 +4171,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_mountain_B_grass_trees",
@@ -4050,7 +4201,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_mountain_C",
@@ -4079,7 +4231,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_mountain_C_grass",
@@ -4108,7 +4261,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_mountain_C_grass_trees",
@@ -4137,7 +4291,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_rock_single_A",
@@ -4165,7 +4320,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_rock_single_B",
@@ -4193,7 +4349,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_rock_single_C",
@@ -4221,7 +4378,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_rock_single_D",
@@ -4249,7 +4407,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_rock_single_E",
@@ -4277,7 +4436,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_tree_single_A",
@@ -4306,7 +4466,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_tree_single_A_cut",
@@ -4335,7 +4496,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_tree_single_B",
@@ -4364,7 +4526,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_tree_single_B_cut",
@@ -4393,7 +4556,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_trees_A_cut",
@@ -4422,7 +4586,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_trees_A_large",
@@ -4451,7 +4616,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_trees_A_medium",
@@ -4480,7 +4646,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_trees_A_small",
@@ -4509,7 +4676,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_trees_B_cut",
@@ -4538,7 +4706,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_trees_B_large",
@@ -4567,7 +4736,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_trees_B_medium",
@@ -4596,7 +4766,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_trees_B_small",
@@ -4625,7 +4796,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_waterlily_A",
@@ -4654,7 +4826,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_waterlily_B",
@@ -4683,7 +4856,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_waterplant_A",
@@ -4712,7 +4886,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_waterplant_B",
@@ -4741,7 +4916,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_nature_waterplant_C",
@@ -4770,7 +4946,8 @@
         "cover"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_barrel",
@@ -4796,7 +4973,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_bucket_arrows",
@@ -4822,7 +5000,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_bucket_empty",
@@ -4848,7 +5027,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_bucket_water",
@@ -4875,7 +5055,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_crate_A_big",
@@ -4901,7 +5082,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_crate_A_small",
@@ -4927,7 +5109,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_crate_B_big",
@@ -4953,7 +5136,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_crate_B_small",
@@ -4979,7 +5163,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_crate_long_A",
@@ -5005,7 +5190,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_crate_long_B",
@@ -5031,7 +5217,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_crate_long_C",
@@ -5057,7 +5244,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_crate_long_empty",
@@ -5083,7 +5271,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_crate_open",
@@ -5109,7 +5298,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_flag_blue",
@@ -5135,7 +5325,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_flag_green",
@@ -5161,7 +5352,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_flag_red",
@@ -5187,7 +5379,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_flag_yellow",
@@ -5213,7 +5406,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_ladder",
@@ -5239,7 +5433,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_pallet",
@@ -5265,7 +5460,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_resource_lumber",
@@ -5291,7 +5487,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_resource_stone",
@@ -5317,7 +5514,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_sack",
@@ -5343,7 +5541,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_target",
@@ -5369,7 +5568,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_tent",
@@ -5395,7 +5595,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_weaponrack",
@@ -5421,7 +5622,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "decoration_props_wheelbarrow",
@@ -5447,7 +5649,8 @@
         "decoration"
       ],
       "walkable": true,
-      "visual_style": "fantasy_medieval"
+      "visual_style": "fantasy_medieval",
+      "is_base_tile": false
     },
     {
       "tile_id": "tiles_base_hex_grass",
@@ -5480,7 +5683,8 @@
         "west": "grass",
         "southwest": "grass",
         "southeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_base_hex_grass_bottom",
@@ -5513,7 +5717,8 @@
         "west": "grass",
         "southwest": "grass",
         "southeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_base_hex_grass_sloped_high",
@@ -5546,7 +5751,8 @@
         "west": "grass",
         "southwest": "grass",
         "southeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_base_hex_grass_sloped_low",
@@ -5579,7 +5785,8 @@
         "southeast": "grass",
         "northeast": "grass",
         "northwest": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_base_hex_water",
@@ -5613,7 +5820,8 @@
         "west": "water",
         "southwest": "water",
         "southeast": "water"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_coast_hex_coast_A",
@@ -5647,7 +5855,8 @@
         "west": "grass",
         "northwest": "grass",
         "northeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_coast_hex_coast_A_waterless",
@@ -5680,7 +5889,8 @@
         "west": "grass",
         "northwest": "grass",
         "northeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_coast_hex_coast_B",
@@ -5714,7 +5924,8 @@
         "southeast": "water",
         "northwest": "grass",
         "northeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_coast_hex_coast_B_waterless",
@@ -5746,7 +5957,8 @@
         "west": "coast",
         "northwest": "grass",
         "northeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_coast_hex_coast_C",
@@ -5780,7 +5992,8 @@
         "east": "water",
         "northeast": "coast",
         "northwest": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_coast_hex_coast_C_waterless",
@@ -5811,7 +6024,8 @@
         "west": "coast",
         "northeast": "coast",
         "northwest": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_coast_hex_coast_D",
@@ -5845,7 +6059,8 @@
         "southeast": "water",
         "east": "water",
         "northeast": "water"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_coast_hex_coast_D_waterless",
@@ -5875,7 +6090,8 @@
       "connections": {
         "west": "coast",
         "northwest": "coast"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_coast_hex_coast_E",
@@ -5909,7 +6125,8 @@
         "northwest": "grass",
         "northeast": "grass",
         "east": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_coast_hex_coast_E_waterless",
@@ -5943,7 +6160,8 @@
         "northwest": "grass",
         "northeast": "grass",
         "east": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_A",
@@ -5977,7 +6195,8 @@
         "southeast": "grass",
         "northwest": "grass",
         "northeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_A_curvy",
@@ -6011,7 +6230,8 @@
         "southeast": "grass",
         "northeast": "grass",
         "northwest": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_A_curvy_waterless",
@@ -6038,7 +6258,8 @@
       ],
       "walkable": false,
       "visual_style": "fantasy_medieval",
-      "connections": {}
+      "connections": {},
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_A_waterless",
@@ -6070,7 +6291,8 @@
         "southeast": "grass",
         "northwest": "grass",
         "northeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_B",
@@ -6104,7 +6326,8 @@
         "southwest": "grass",
         "southeast": "grass",
         "east": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_B_waterless",
@@ -6136,7 +6359,8 @@
         "southwest": "grass",
         "southeast": "grass",
         "east": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_C",
@@ -6170,7 +6394,8 @@
         "west": "river",
         "southwest": "grass",
         "southeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_C_waterless",
@@ -6202,7 +6427,8 @@
         "northeast": "grass",
         "southwest": "grass",
         "southeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_crossing_A",
@@ -6236,7 +6462,8 @@
         "northwest": "road",
         "southwest": "grass",
         "northeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_crossing_A_waterless",
@@ -6268,7 +6495,8 @@
         "northwest": "road",
         "southwest": "grass",
         "northeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_crossing_B",
@@ -6302,7 +6530,8 @@
         "southwest": "road",
         "southeast": "grass",
         "northwest": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_crossing_B_waterless",
@@ -6334,7 +6563,8 @@
         "southwest": "road",
         "southeast": "grass",
         "northwest": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_D",
@@ -6368,7 +6598,8 @@
         "west": "river",
         "southwest": "grass",
         "southeast": "river"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_D_waterless",
@@ -6399,7 +6630,8 @@
         "east": "grass",
         "northwest": "grass",
         "southwest": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_E",
@@ -6433,7 +6665,8 @@
         "west": "river",
         "southwest": "grass",
         "southeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_E_waterless",
@@ -6464,7 +6697,8 @@
         "northwest": "grass",
         "southwest": "grass",
         "southeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_F",
@@ -6498,7 +6732,8 @@
         "west": "river",
         "southwest": "grass",
         "southeast": "river"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_F_waterless",
@@ -6529,7 +6764,8 @@
         "northeast": "grass",
         "northwest": "grass",
         "southwest": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_G",
@@ -6563,7 +6799,8 @@
         "west": "river",
         "southwest": "river",
         "southeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_G_waterless",
@@ -6594,7 +6831,8 @@
         "east": "grass",
         "northeast": "grass",
         "southeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_H",
@@ -6628,7 +6866,8 @@
         "west": "river",
         "southwest": "river",
         "southeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_H_waterless",
@@ -6658,7 +6897,8 @@
       "connections": {
         "northeast": "grass",
         "southeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_I",
@@ -6692,7 +6932,8 @@
         "west": "grass",
         "southwest": "river",
         "southeast": "river"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_I_waterless",
@@ -6722,7 +6963,8 @@
       "connections": {
         "east": "grass",
         "west": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_J",
@@ -6756,7 +6998,8 @@
         "west": "river",
         "southwest": "river",
         "southeast": "river"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_J_waterless",
@@ -6786,7 +7029,8 @@
       "connections": {
         "northeast": "grass",
         "northwest": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_K",
@@ -6820,7 +7064,8 @@
         "west": "river",
         "southwest": "river",
         "southeast": "river"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_K_waterless",
@@ -6849,7 +7094,8 @@
       "visual_style": "fantasy_medieval",
       "connections": {
         "east": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_L",
@@ -6883,7 +7129,8 @@
         "west": "river",
         "southwest": "river",
         "southeast": "river"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_rivers_hex_river_L_waterless",
@@ -6910,7 +7157,8 @@
       ],
       "walkable": false,
       "visual_style": "fantasy_medieval",
-      "connections": {}
+      "connections": {},
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_roads_hex_road_A",
@@ -6945,7 +7193,8 @@
         "southeast": "grass",
         "northeast": "grass",
         "northwest": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_roads_hex_road_A_sloped_high",
@@ -6980,7 +7229,8 @@
         "southeast": "grass",
         "northeast": "grass",
         "northwest": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_roads_hex_road_A_sloped_low",
@@ -7015,7 +7265,8 @@
         "northwest": "grass",
         "northeast": "grass",
         "southeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_roads_hex_road_B",
@@ -7050,7 +7301,8 @@
         "southeast": "grass",
         "east": "grass",
         "northwest": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_roads_hex_road_C",
@@ -7085,7 +7337,8 @@
         "southeast": "grass",
         "east": "grass",
         "northeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_roads_hex_road_D",
@@ -7120,7 +7373,8 @@
         "southwest": "grass",
         "northwest": "grass",
         "east": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_roads_hex_road_E",
@@ -7155,7 +7409,8 @@
         "southwest": "grass",
         "southeast": "grass",
         "northwest": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_roads_hex_road_F",
@@ -7190,7 +7445,8 @@
         "southwest": "grass",
         "northwest": "grass",
         "northeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_roads_hex_road_G",
@@ -7225,7 +7481,8 @@
         "southeast": "grass",
         "east": "grass",
         "northeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_roads_hex_road_H",
@@ -7260,7 +7517,8 @@
         "southeast": "grass",
         "east": "road",
         "northeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_roads_hex_road_I",
@@ -7295,7 +7553,8 @@
         "southeast": "road",
         "west": "grass",
         "east": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_roads_hex_road_J",
@@ -7330,7 +7589,8 @@
         "southeast": "road",
         "northwest": "grass",
         "northeast": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_roads_hex_road_K",
@@ -7365,7 +7625,8 @@
         "southwest": "road",
         "southeast": "road",
         "east": "grass"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_roads_hex_road_L",
@@ -7400,7 +7661,8 @@
         "west": "road",
         "southwest": "road",
         "southeast": "road"
-      }
+      },
+      "is_base_tile": true
     },
     {
       "tile_id": "tiles_roads_hex_road_M",
@@ -7435,7 +7697,8 @@
         "east": "grass",
         "northeast": "grass",
         "northwest": "grass"
-      }
+      },
+      "is_base_tile": true
     }
   ],
   "approvedTiles": [

@@ -3,6 +3,7 @@ import { MapGenerator } from '@/lib/llm/MapGenerator'
 import { MapSerializer } from '@/lib/game/MapSerializer'
 import { Map as GameMap } from '@/lib/game/Map'
 import { Hex, TERRAIN_TYPES } from '@/lib/game/Hex'
+import { promptManager } from '@/lib/llm/PromptManager'
 import fs from 'fs'
 import path from 'path'
 import type { GeneratedHex } from '@/lib/llm/MapGenerator'
@@ -20,6 +21,7 @@ interface TileDescriptor {
   obj_path?: string
   mtl_path?: string
   name?: string
+  is_base_tile: boolean
 }
 
 /**
@@ -325,53 +327,13 @@ async function generateMapWithLocalModelStreaming(params: {
   onProgress('Prompt processing progress: 10%')
   onProgress('Analyzing river connection requirements...')
 
-  const systemMessage = `You are an expert game designer. You must respond ONLY with valid JSON.
-Return a JSON object with this exact structure:
-{
-  "hexes": [
-    {
-      "q": number (0-${width - 1}),
-      "r": number (0-${height - 1}),
-      "tile_id": "string",
-      "rotation": number (0, 60, 120, 180, 240, or 300),
-      "height": number (0-4)
-    }
-  ]
-}`
-
-  onProgress('Prompt processing progress: 40%')
-  onProgress('Building connection algorithm...')
-
-  const userPrompt = `Create a ${width}x${height} hex map: "${prompt}". Biome: ${biome}.
-
-SIMPLE TASK: Create a river with an island in the middle.
-
-AVAILABLE TILES:
-- "tiles_base_hex_grass" - grass terrain
-- "tiles_rivers_hex_river_A" - straight river (connects east-west at 0° rotation)
-- "tiles_rivers_hex_river_E" - 3-way river junction (connects east-northeast-west at 0° rotation)
-
-SIMPLE EXAMPLE for 10x10 map:
-River flows horizontally across row 5 (r=5), splits at column 4, goes around island, merges at column 6.
-
-River path: (4,5)→(5,4) and (4,5)→(5,6), then (6,4)→(7,5) and (6,6)→(7,5)
-- (0,5) to (3,5): "tiles_rivers_hex_river_A", rotation 0
-- (4,5): "tiles_rivers_hex_river_E", rotation 0 (splits east→northeast+southeast)
-- (5,4): "tiles_rivers_hex_river_A", rotation 60 (northeast-southwest)
-- (5,6): "tiles_rivers_hex_river_A", rotation 300 (southeast-northwest)
-- (6,4): "tiles_rivers_hex_river_A", rotation 60
-- (6,6): "tiles_rivers_hex_river_A", rotation 300
-- (7,5): "tiles_rivers_hex_river_E", rotation 180 (merges northeast+southeast→west)
-- (8,5) to (9,5): "tiles_rivers_hex_river_A", rotation 0
-
-Island at (5,5): "tiles_base_hex_grass"
-All other positions: "tiles_base_hex_grass"
-
-Generate ALL ${width * height} hexes. All tiles height 0. Return JSON: {"hexes": [...]}`
-
-  onProgress('Prompt processing progress: 80%')
-  onProgress('Thought for 5 seconds')
-  onProgress('Calculating optimal river path and tile rotations...')
+  // Use PromptManager for unified prompt generation
+  const { systemMessage: unifiedSystemMessage, userPrompt } = promptManager.getPrompts({
+    width,
+    height,
+    prompt: prompt || 'Generate a fantasy map',
+    biome: biome || 'plains'
+  })
 
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 600000)
@@ -389,7 +351,7 @@ Generate ALL ${width * height} hexes. All tiles height 0. Return JSON: {"hexes":
       body: JSON.stringify({
         model,
         messages: [
-          { role: 'system', content: systemMessage },
+          { role: 'system', content: unifiedSystemMessage },
           { role: 'user', content: userPrompt },
         ],
         temperature: 0.7,
@@ -458,46 +420,14 @@ async function generateMapWithLocalModel(params: {
 }): Promise<GeneratedHex[]> {
   const { width, height, prompt, biome, localUrl, model } = params
 
-  const systemMessage = `You are an expert game designer. You must respond ONLY with valid JSON.
-Return a JSON object with this exact structure:
-{
-  "hexes": [
-    {
-      "q": number (0-${width - 1}),
-      "r": number (0-${height - 1}),
-      "tile_id": "string",
-      "rotation": number (0, 60, 120, 180, 240, or 300),
-      "height": number (0-4)
-    }
-  ]
-}`
+  // Use PromptManager for unified prompt generation
+  const { systemMessage: unifiedSystemMessage, userPrompt } = promptManager.getPrompts({
+    width,
+    height,
+    prompt: prompt || 'Generate a fantasy map',
+    biome: biome || 'plains'
+  })
 
-  const userPrompt = `Create a ${width}x${height} hex map: "${prompt}". Biome: ${biome}.
-
-SIMPLE TASK: Create a river with an island in the middle.
-
-AVAILABLE TILES:
-- "tiles_base_hex_grass" - grass terrain
-- "tiles_rivers_hex_river_A" - straight river (connects east-west at 0° rotation)
-- "tiles_rivers_hex_river_E" - 3-way river junction (connects east-northeast-west at 0° rotation)
-
-SIMPLE EXAMPLE for 10x10 map:
-River flows horizontally across row 5 (r=5), splits at column 4, goes around island, merges at column 6.
-
-River path: (4,5)→(5,4) and (4,5)→(5,6), then (6,4)→(7,5) and (6,6)→(7,5)
-- (0,5) to (3,5): "tiles_rivers_hex_river_A", rotation 0
-- (4,5): "tiles_rivers_hex_river_E", rotation 0 (splits east→northeast+southeast)
-- (5,4): "tiles_rivers_hex_river_A", rotation 60 (northeast-southwest)
-- (5,6): "tiles_rivers_hex_river_A", rotation 300 (southeast-northwest)
-- (6,4): "tiles_rivers_hex_river_A", rotation 60
-- (6,6): "tiles_rivers_hex_river_A", rotation 300
-- (7,5): "tiles_rivers_hex_river_E", rotation 180 (merges northeast+southeast→west)
-- (8,5) to (9,5): "tiles_rivers_hex_river_A", rotation 0
-
-Island at (5,5): "tiles_base_hex_grass"
-All other positions: "tiles_base_hex_grass"
-
-Generate ALL ${width * height} hexes. All tiles height 0. Return JSON: {"hexes": [...]}`
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 600000)
 
@@ -511,7 +441,7 @@ Generate ALL ${width * height} hexes. All tiles height 0. Return JSON: {"hexes":
       body: JSON.stringify({
         model,
         messages: [
-          { role: 'system', content: systemMessage },
+          { role: 'system', content: unifiedSystemMessage },
           { role: 'user', content: userPrompt },
         ],
         temperature: 0.7,

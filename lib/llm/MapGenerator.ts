@@ -7,6 +7,8 @@
 import { LLMClient } from './LLMClient'
 import { Map as GameMap } from '../game/Map'
 import { Hex, TERRAIN_TYPES, type TerrainType } from '../game/Hex'
+import { getAxialNeighbors } from '../game/HexCoordinateConverter'
+import { promptManager } from './PromptManager'
 import fs from 'fs'
 import path from 'path'
 import type { TileDescriptor } from './AssetAnalyzer'
@@ -125,110 +127,21 @@ export class MapGenerator {
     const userPrompt = prompt || `Generate a ${biome || 'plains'} map`
     const primaryBiome = biome || 'plains'
 
-    const promptText = `You are an expert game designer specializing in creating hex-based tactical maps for turn-based strategy games.
+    // Use PromptManager for unified prompt generation
+    const { systemMessage, userPrompt: baseUserPrompt } = promptManager.getPrompts({
+      width,
+      height,
+      prompt: userPrompt,
+      biome: primaryBiome
+    })
 
-Your task is to generate a hex map layout based on the provided parameters.
-
-MAP COORDINATES SYSTEM:
-- This map uses AXIAL coordinates (q, r)
-- q ranges from 0 to ${width - 1}
-- r ranges from 0 to ${height - 1}
-- Distance formula: distance(a, b) = (|a.q - b.q| + |a.q + a.r - b.q - b.r| + |a.r - b.r|) / 2
-- Each hex has 6 neighbors
-
-HEIGHT SYSTEM - CRITICAL RULES:
-- Height levels: 0 (ground level) to 4 (highest)
-- Each hex position (q, r) can have MULTIPLE tiles at different heights, forming a stack
-- IMPORTANT: If you place a tile at height N, you MUST also place a BASE tile at height 0 at the same position (q, r)
-- For example: If placing a castle at height 2, you need:
-  * Base tile (plains/grass) at height 0
-  * Castle tile at height 2 (it will stack on top)
-- Water tiles are ALWAYS at height 0
-- Mountains/hills: Use height 0-1 for foothills, height 2-4 for peaks (but always include base at height 0)
-- Forests: Usually height 0-1, with base tile at height 0
-- Buildings: Height 0-1, always with base tile at height 0
-- Adjacent hexes should not differ by more than 1 height level (realistic slopes)
-
-RIVER/ROAD CONNECTIVITY - CRITICAL:
-- Rivers and roads MUST form continuous, connected paths
-- Each tile has connection information in the "connections" field (if present)
-- The "connections" field indicates which of the 6 hex sides have connections:
-  * east, northeast, northwest, west, southwest, southeast
-- Connection types: "river", "road", "water", "grass" - use tiles with matching connection types
-- When placing a tile, check its "connections" field to see which sides connect
-- Rotate tiles (0, 60, 120, 180, 240, 300 degrees) to align connections properly
-- CRITICAL RULE: If tile A connects to neighbor B at direction X, then:
-  * Tile A must have connection at direction X
-  * Tile B must have connection at the OPPOSITE direction (X + 180 degrees)
-  * Example: If A connects EAST to B, then A has "east: true" and B has "west: true"
-- CONNECTION COUNTS for rivers/roads:
-  * 2 connections = straight line or turn (most common)
-  * 3 connections = branching/merging point (for splits and joins)
-  * 4+ connections = complex intersections
-- For river branching/merging: use tiles with exactly 3 river connections
-- For road branching/merging: use tiles with exactly 3 road connections
-- All connections are equal - no "input/output" concept, just continuous flow
-- River tiles should form continuous networks without gaps or disconnected segments
-- Road tiles should form connected road networks
-- Always use height 0 for all river/road tiles
-
-TILE PLACEMENT RULES:
-1. Match biome to tile_id (use tiles with matching biome property from the registry)
-2. ALWAYS place a base tile (height 0) before placing elevated features (height > 0)
-3. For each position with elevated features, generate TWO hexes: base at height 0, feature at target height
-4. Ensure walkable paths between important areas
-5. Rivers/roads MUST form connected networks with proper connection alignment
-6. Buildings/structures must be placed on flat terrain (height 0-1) with base tile at height 0
-7. Rotation must be one of: 0, 60, 120, 180, 240, or 300 degrees
-8. For rivers: Use tiles with "connections.river" and rotate to create continuous flow
-9. For roads: Use tiles with "connections.road" and rotate to create continuous paths
-10. For branching/merging: Use tiles with exactly 3 connections of the same type
-11. MANDATORY: Every non-base tile (decoration, building) MUST have a base tile at the same (q,r) position at height 0
-
-OUTPUT FORMAT:
-You must output a JSON object with a "hexes" array. Each hex object must have:
-- q: number (axial coordinate, 0 to ${width - 1})
-- r: number (axial coordinate, 0 to ${height - 1})
-- tile_id: string (must match a tile_id from the provided registry)
-- rotation: number (0, 60, 120, 180, 240, or 300 degrees)
-- height: number (0-4)
-
-USER REQUEST: ${userPrompt}
-PRIMARY BIOME: ${primaryBiome}
-
-CONSTRAINTS:
-- Map size: ${width}x${height}
-- Maximum slope: 1 (adjacent hexes should not differ by more than 1 height level)
-- Generate hexes for ALL positions (q, r) where q in [0, ${width - 1}], r in [0, ${height - 1}]
-- For positions with elevated features (height > 0), generate TWO hexes: base tile at height 0 + feature tile at target height
-- Total hexes should be approximately ${width * height} (one base per position) plus additional hexes for elevated features
+    // Add tile registry to the prompt
+    const promptText = `${systemMessage}
 
 TILE REGISTRY (use tile_id values from here):
 ${JSON.stringify(compactTiles, null, 2)}
 
-BIOME REALISM RULES:
-1. WATER BIOMES:
-   - Form connected areas (rivers flow, lakes are circular)
-   - Always height 0
-   - Use tile_id values with biome="water"
-
-2. MOUNTAIN BIOMES:
-   - Cluster in groups of 5+ hexes
-   - Height 2-4 (peaks at 3-4, foothills at 1-2)
-   - Use tile_id values with biome="mountain"
-
-3. FOREST BIOMES:
-   - Form large continuous areas (10+ hexes)
-   - Height 0-2
-   - Use tile_id values with biome="forest"
-
-4. PLAINS BIOMES:
-   - Most common biome type
-   - Flat terrain (height 0-1)
-   - Good for roads and settlements
-   - Use tile_id values with biome="plains"
-
-Generate a realistic and playable map based on the user's request. The primary biome should be ${primaryBiome}, but you can include other biomes as appropriate to create a natural landscape. Return JSON with "hexes" array.`
+${baseUserPrompt}`
 
     return promptText
   }
