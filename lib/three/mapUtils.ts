@@ -124,11 +124,14 @@ export function createHexagonalGrid(params: CreateHexagonalGridParams): THREE.Gr
   const gridY = level * LEVEL_HEIGHT + 0.001
 
   // Create grid using offset coordinates for rectangular initialization, then convert to axial
+  // Always create grid for all positions in the rectangular grid, regardless of map state
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       // Convert offset to axial for grid creation
       const { q, r } = offsetToAxial(x, y)
-      if (map.isValidCoordinate(q, r)) {
+      // Create grid for all positions in rectangular bounds, even if map is empty
+      // This ensures grid is visible in production build when map is empty
+      if (q >= 0 && q < width && r >= -width && r < height + width) {
         const [worldX, worldZ] = hexToWorld(q, r, width, height)
         const points = getHexPoints(worldX, worldZ, R * scale, 0)
         const linePoints: THREE.Vector3[] = []

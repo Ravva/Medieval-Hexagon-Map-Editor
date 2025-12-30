@@ -123,12 +123,14 @@ export default function MapEditor() {
   }
 
   const createHexagonalGridForEditor = (width: number, height: number, level: number): THREE.Group => {
-    if (!mapRef.current) return new THREE.Group()
+    // Create a temporary map if mapRef.current doesn't exist yet (for grid creation)
+    // This ensures grid is visible even when map is empty or not yet initialized
+    const map = mapRef.current || new GameMap(width, height)
     return createHexagonalGrid({
       width,
       height,
       level,
-      map: mapRef.current,
+      map,
       tileHeightRef,
       hexToWorld
     })
