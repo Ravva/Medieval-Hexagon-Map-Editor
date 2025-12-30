@@ -19,7 +19,7 @@ export interface LLMRequestOptions {
   model?: string
   temperature?: number
   maxTokens?: number
-  responseSchema?: object // JSON Schema
+  responseSchema?: any // JSON Schema (using any to match Google Generative AI types)
 }
 
 export class LLMClient {

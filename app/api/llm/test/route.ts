@@ -105,26 +105,26 @@ export async function POST(request: Request) {
         generationConfig: {
           responseMimeType: 'application/json',
           responseSchema: {
-            type: 'object',
+            type: 'object' as const,
             properties: {
               message: {
-                type: 'string',
+                type: 'string' as const,
               },
               status: {
-                type: 'string',
+                type: 'string' as const,
                 enum: ['success', 'error'],
               },
               data: {
-                type: 'object',
+                type: 'object' as const,
                 properties: {
-                  testNumber: { type: 'number' },
-                  testBoolean: { type: 'boolean' },
+                  testNumber: { type: 'number' as const },
+                  testBoolean: { type: 'boolean' as const },
                 },
                 required: ['testNumber', 'testBoolean'],
               },
             },
             required: ['message', 'status', 'data'],
-          },
+          } as any,
         },
       })
 
@@ -156,25 +156,25 @@ export async function POST(request: Request) {
         generationConfig: {
           responseMimeType: 'application/json',
           responseSchema: {
-            type: 'object',
+            type: 'object' as const,
             properties: {
               hexes: {
-                type: 'array',
+                type: 'array' as const,
                 items: {
-                  type: 'object',
+                  type: 'object' as const,
                   properties: {
-                    q: { type: 'integer', minimum: 0, maximum: 5 },
-                    r: { type: 'integer', minimum: 0, maximum: 5 },
-                    tile_id: { type: 'string' },
-                    rotation: { type: 'integer', minimum: 0, maximum: 300 },
-                    height: { type: 'integer', minimum: 0, maximum: 4 },
+                    q: { type: 'integer' as const, minimum: 0, maximum: 5 },
+                    r: { type: 'integer' as const, minimum: 0, maximum: 5 },
+                    tile_id: { type: 'string' as const },
+                    rotation: { type: 'integer' as const, minimum: 0, maximum: 300 },
+                    height: { type: 'integer' as const, minimum: 0, maximum: 4 },
                   },
                   required: ['q', 'r', 'tile_id', 'rotation', 'height'],
                 },
               },
             },
             required: ['hexes'],
-          },
+          } as any,
         },
       })
 

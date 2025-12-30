@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { MapGenerator } from '@/lib/llm/MapGenerator'
 import { MapSerializer } from '@/lib/game/MapSerializer'
 import { Map as GameMap } from '@/lib/game/Map'
-import { Hex, TERRAIN_TYPES } from '@/lib/game/Hex'
+import { Hex, TERRAIN_TYPES, type TerrainType } from '@/lib/game/Hex'
 import { promptManager } from '@/lib/llm/PromptManager'
 import fs from 'fs'
 import path from 'path'
@@ -584,7 +584,7 @@ async function convertGeneratedHexesToGameMap(
   const gameMap = new GameMap(width, height)
 
   for (const generatedHex of generatedHexes) {
-    let terrain = TERRAIN_TYPES.PLAINS
+    let terrain: TerrainType = TERRAIN_TYPES.PLAINS
     if (generatedHex.tile_id.includes('river') || generatedHex.tile_id.includes('water')) {
       terrain = TERRAIN_TYPES.WATER
     } else if (generatedHex.tile_id.includes('forest')) {

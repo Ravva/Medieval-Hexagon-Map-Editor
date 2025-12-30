@@ -539,9 +539,11 @@ CRITICAL REMINDER: You MUST use ONLY tile_id values from the TILE REGISTRY above
       } else if (bestMatch === 0 && correctedCount < 3) {
         // Log if we couldn't find any matching rotation
         const reqDirs = Array.from(requiredConnections.keys()).join(', ')
-        const tileDirs = Object.keys(tileDescriptor.connections)
-          .filter((dir) => tileDescriptor.connections[dir as keyof typeof tileDescriptor.connections] === connectionType)
-          .join(', ')
+        const tileDirs = tileDescriptor.connections
+          ? Object.keys(tileDescriptor.connections)
+              .filter((dir) => tileDescriptor.connections![dir as keyof typeof tileDescriptor.connections] === connectionType)
+              .join(', ')
+          : 'no connections'
         console.warn(
           `[Rotation Correction FAILED] Tile ${hex.tile_id} at (${hex.q},${hex.r}): Could not match required directions [${reqDirs}] with tile connections [${tileDirs}]`
         )
