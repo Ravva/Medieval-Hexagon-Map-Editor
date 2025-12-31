@@ -15,7 +15,13 @@
 
 ![UI Screenshot](https://raw.githubusercontent.com/Ravva/Medieval-Hexagon-Map-Editor/main/public/UI%20v2.png)
 
-**Based on:** [Medieval Hexagon Pack](https://raw.githubusercontent.com/Ravva/Medieval-Hexagon-Map-Editor/main/public/MHP.png) | [KayKit Medieval Hexagon](https://kaylousberg.itch.io/kaykit-medieval-hexagon) by [Kay Lousberg](https://kaylousberg.itch.io/)
+<div style="background: transparent;">
+
+![Medieval Hexagon Pack](https://raw.githubusercontent.com/Ravva/Medieval-Hexagon-Map-Editor/main/public/MHP.png)
+
+</div>
+
+**Based on:** [KayKit Medieval Hexagon](https://kaylousberg.itch.io/kaykit-medieval-hexagon) by [Kay Lousberg](https://kaylousberg.itch.io/)
 
 </div>
 
