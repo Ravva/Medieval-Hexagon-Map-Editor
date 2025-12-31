@@ -2,7 +2,7 @@
 
 <div align="center">
 
-**Современный веб-редактор для создания и редактирования гексагональных карт с 3D визуализацией и ИИ-генерацией**
+**Modern web editor for creating and editing hexagonal maps with 3D visualization and AI generation**
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.1.1-black?logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19.2.3-blue?logo=react)](https://react.dev/)
@@ -13,249 +13,259 @@
 
 ---
 
-## 📋 Описание
+## 📋 Description
 
-**Medieval Hexagon Map Editor** — это полнофункциональный 3D редактор для создания и редактирования гексагональных карт. Редактор позволяет создавать сложные многоуровневые ландшафты с использованием реальных 3D моделей, поддерживает генерацию карт через ИИ (Google Gemini API) и предоставляет современный интерфейс с расширенными возможностями редактирования.
+**Medieval Hexagon Map Editor** is a full-featured 3D editor for creating and editing hexagonal maps. The editor allows you to create complex multi-level landscapes using real 3D models, supports map generation via AI (Google Gemini API or local via LM Studio), and provides a modern interface with advanced editing capabilities.
 
-### ✨ Основные возможности
+### ✨ Key Features
 
-- 🎨 **3D Редактирование** — Полнофункциональный 3D редактор с использованием Three.js и реальных 3D моделей
-- 📐 **Многоуровневая система** — Поддержка до 5 уровней высоты для создания сложных ландшафтов
-- 🤖 **ИИ-генерация карт** — Автоматическая генерация карт через Google Gemini API или локальные LLM модели
-- 🎯 **Точное редактирование** — Размещение тайлов, зданий, декораций с точным позиционированием
-- 🔄 **Умные инструменты** — Копирование/вставка, множественное выделение, undo/redo
-- 💾 **Сохранение и загрузка** — Экспорт карт в JSON формат для дальнейшего использования
-- 🎮 **Горячие клавиши** — Быстрое редактирование с помощью клавиатурных сокращений
-- 🌊 **Автоматическая коррекция** — Автоматическое выравнивание рек и дорог для правильных соединений
+- 🎨 **3D Editing** — Full-featured 3D editor using Three.js and real 3D models
+- 📐 **Multi-level System** — Support for up to 5 height levels for creating complex landscapes
+- 🤖 **AI Map Generation** — Automatic map generation via Google Gemini API or local LLM models
+- 🎯 **Precise Editing** — Placement of tiles, buildings, decorations with precise positioning
+- 🔄 **Smart Tools** — Copy/paste, multi-selection, undo/redo
+- 💾 **Save & Load** — Export maps to JSON format for further use
+- 🎮 **Hotkeys** — Fast editing with keyboard shortcuts
+- 🌊 **Auto-correction** — Automatic alignment of rivers and roads for proper connections (WIP)
 
 ---
 
-## 🛠️ Технологический стек
+## 🛠️ Tech Stack
 
 ### Frontend
-- **[Next.js 16.1.1](https://nextjs.org/)** — React фреймворк с App Router
-- **[React 19.2.3](https://react.dev/)** — UI библиотека
-- **[TypeScript 5](https://www.typescriptlang.org/)** — Типизация
-- **[Three.js 0.182.0](https://threejs.org/)** — 3D рендеринг и визуализация
-- **[Tailwind CSS 3.4](https://tailwindcss.com/)** — Стилизация
-- **[Shadcn/ui](https://ui.shadcn.com/)** — UI компоненты на базе Radix UI
+- **[Next.js 16.1.1](https://nextjs.org/)** — React framework with App Router
+- **[React 19.2.3](https://react.dev/)** — UI library
+- **[TypeScript 5](https://www.typescriptlang.org/)** — Type safety
+- **[Three.js 0.182.0](https://threejs.org/)** — 3D rendering and visualization
+- **[Tailwind CSS 3.4](https://tailwindcss.com/)** — Styling
+- **[Shadcn/ui](https://ui.shadcn.com/)** — UI components based on Radix UI
 
 ### Backend & API
-- **[Google Gemini API](https://ai.google.dev/)** — Генерация карт через ИИ
-- **Next.js API Routes** — Серверные эндпоинты для работы с LLM
+- **[Google Gemini API](https://ai.google.dev/)** — AI-powered map generation
+- **Next.js API Routes** — Server endpoints for LLM integration
 
-### Инструменты разработки
-- **[Bun](https://bun.sh/)** — Пакетный менеджер и runtime
-- **[Biome](https://biomejs.dev/)** — Линтер и форматтер кода
-- **[Vitest](https://vitest.dev/)** — Фреймворк для тестирования
-- **[Turbopack](https://turbo.build/pack)** — Быстрая сборка (опционально)
+### Development Tools
+- **[Bun](https://bun.sh/)** — Package manager and runtime
+- **[Biome](https://biomejs.dev/)** — Code linter and formatter
+- **[Vitest](https://vitest.dev/)** — Testing framework
+- **[Turbopack](https://turbo.build/pack)** — Fast build tool (optional)
 
 ---
 
-## 🚀 Быстрый старт
+## 🚀 Quick Start
 
-### Предварительные требования
+### Prerequisites
 
-- **Node.js** 20+ или **Bun** 1.0+
-- **npm**, **yarn**, **pnpm** или **bun** (рекомендуется bun)
+- **Node.js** 20+ or **Bun** 1.0+
+- **npm**, **yarn**, **pnpm**, or **bun** (bun recommended)
 
-### Установка
+### Installation
 
-1. **Клонируйте репозиторий**
+1. **Clone the repository**
    ```bash
    git clone https://github.com/your-username/Medieval-Hexagon-Map-Editor.git
    cd Medieval-Hexagon-Map-Editor
    ```
 
-2. **Установите зависимости**
+2. **Install dependencies**
    ```bash
    bun install
-   # или
+   # or
    npm install
    ```
 
-3. **Настройте переменные окружения** (опционально)
-   
-   Создайте файл `.env.local` в корне проекта:
-   ```env
-   GEMINI_API_KEY=your_gemini_api_key_here
-   ```
-   
-   > 💡 **Примечание**: Ключ API можно также ввести в интерфейсе редактора при использовании функции генерации карт.
-
-4. **Запустите сервер разработки**
+3. **Run the development server**
    ```bash
    bun run dev
-   # или
+   # or
    npm run dev
    ```
 
-5. **Откройте браузер**
-   
-   Перейдите по адресу [http://localhost:3000](http://localhost:3000)
+4. **Open your browser**
+
+   Navigate to [http://localhost:3000](http://localhost:3000)
 
 ---
 
-## 📖 Использование
+## 📖 Usage
 
-### Основные функции редактора
+### Main Editor Features
 
-#### 🎨 Редактирование карты
+#### 🎨 Map Editing
 
-- **Левый клик** — Разместить/выбрать тайл
-- **Правый клик** — Повернуть тайл
-- **Средний клик** — Переместить камеру
-- **Перетаскивание** — Переместить тайл
-- **R/F** — Изменить уровень высоты
-- **Ctrl+ЛКМ** — Множественное выделение
-- **Ctrl+C** — Копировать тайл
-- **Ctrl+V** — Вставить тайл
-- **Ctrl+Z** — Отменить действие
-- **Ctrl+Y** — Повторить действие
+- **Left Click** — Place/select tile
+- **Right Click** — Rotate tile
+- **Middle Click** — Pan camera
+- **Drag** — Move tile
+- **R/F** — Change height level
+- **Ctrl+Left Click** — Multi-select
+- **Ctrl+C** — Copy tile
+- **Ctrl+V** — Paste tile
+- **Ctrl+Z** — Undo action
+- **Ctrl+Y** — Redo action
 
-#### 🤖 Генерация карт через ИИ
+#### 🤖 AI Map Generation
 
-1. Нажмите кнопку **"Generate Map"** в интерфейсе
-2. Выберите провайдера LLM (Google Gemini или локальный сервер)
-3. Введите API ключ (если используете Gemini)
-4. Настройте параметры генерации:
-   - Размер карты
-   - Биом (равнины, лес, пустыня и т.д.)
-   - Наличие рек и дорог
-   - Расположение деревень
-5. Введите пользовательский промпт (опционально)
-6. Нажмите **"Generate"** и дождитесь результата
+1. Click the **"Generate Map"** button in the interface
+2. Select LLM provider (Google Gemini or local server)
+3. Enter API key (if using Gemini)
+4. Configure generation parameters:
+   - Map size
+   - Biome (plains, forest, desert, etc.)
+   - Rivers and roads
+   - Village placement
+5. Enter custom prompt (optional)
+6. Click **"Generate"** and wait for the result
 
-#### 💾 Сохранение и загрузка
+#### 💾 Save & Load
 
-- **Сохранить карту**: `File → Save Map` или `Ctrl+S`
-- **Загрузить карту**: `File → Load Map` или `Ctrl+O`
-- **Новая карта**: `File → New Map` или `Ctrl+N`
+- **Save Map**: `File → Save Map` or `Ctrl+S`
+- **Load Map**: `File → Load Map` or `Ctrl+O`
+- **New Map**: `File → New Map` or `Ctrl+N`
 
 ---
 
-## 📁 Структура проекта
+## 📁 Project Structure
 
 ```
 Medieval-Hexagon-Map-Editor/
 ├── app/                    # Next.js App Router
 │   ├── api/               # API Routes
-│   │   └── llm/          # LLM интеграция
-│   └── page.tsx          # Главная страница
-├── components/            # React компоненты
-│   ├── MapEditor.tsx     # Главный компонент редактора
-│   ├── GenerateMapDialog.tsx  # Диалог генерации карт
-│   ├── AssetPanel.tsx    # Панель выбора ассетов
-│   └── ui/               # Shadcn/ui компоненты
-├── lib/                   # Библиотеки и утилиты
-│   ├── game/             # Игровая логика (Map, Hex, Serializer)
-│   ├── llm/              # LLM клиент и генератор карт
-│   └── three/            # Three.js утилиты
-├── assets/                # 3D модели и текстуры
-│   └── terrain/          # Тайлы, здания, декорации
-├── scripts/               # Вспомогательные скрипты
-└── docs/                  # Документация
+│   │   └── llm/          # LLM integration
+│   └── page.tsx          # Main page
+├── components/            # React components
+│   ├── MapEditor.tsx     # Main editor component
+│   ├── GenerateMapDialog.tsx  # Map generation dialog
+│   ├── AssetPanel.tsx    # Asset selection panel
+│   └── ui/               # Shadcn/ui components
+├── lib/                   # Libraries and utilities
+│   ├── game/             # Game logic (Map, Hex, Serializer)
+│   ├── llm/              # LLM client and map generator
+│   └── three/            # Three.js utilities
+├── assets/                # 3D models and textures
+│   └── terrain/          # Tiles, buildings, decorations
+├── scripts/               # Utility scripts
+└── docs/                  # Documentation
 ```
 
 ---
 
-## 🧪 Разработка
+## 🧪 Development
 
-### Доступные команды
+### Available Commands
 
 ```bash
-# Разработка (Turbopack)
+# Development (Turbopack)
 bun run dev
 
-# Разработка (Webpack)
+# Development (Webpack)
 bun run dev:webpack
 
-# Сборка для продакшена
+# Production build
 bun run build
 
-# Запуск продакшн сервера
+# Start production server
 bun run start
 
-# Линтинг
+# Linting
 bun run lint
 
-# Форматирование
+# Formatting
 bun run format
 
-# Проверка кода (линт + формат)
+# Code check (lint + format)
 bun run check
 
-# Тестирование
+# Testing
 bun run test
 
-# Генерация реестра тайлов
+# Generate tile registry
 bun run generate-registry
 ```
 
-### Форматирование кода
+### Code Formatting
 
-Проект использует **Biome** для форматирования и линтинга. Настройки находятся в `biome.json`.
+The project uses **Biome** for formatting and linting. Configuration is in `biome.json`.
 
 ```bash
-# Автоматическое исправление проблем
+# Auto-fix issues
 bun run check:fix
 ```
 
 ---
 
-## 🎯 Особенности реализации
+## 🎯 Implementation Details
 
-### Система координат
+### Coordinate System
 
-Редактор использует **осевые координаты (q, r)** для гексагональной сетки, что обеспечивает:
-- Совместимость с LLM-генерацией карт
-- Простоту математических операций
-- Эффективное хранение данных
+The editor uses **axial coordinates (q, r)** for the hexagonal grid, which provides:
+- Compatibility with LLM map generation
+- Simplicity of mathematical operations
+- Efficient data storage
 
-### Многоуровневая система
+### Multi-level System
 
-Поддержка до **5 уровней высоты** позволяет создавать:
-- Сложные ландшафты с перепадами высот
-- Многоэтажные структуры
-- Реалистичные горные массивы
+Support for up to **5 height levels** allows creating:
+- Complex landscapes with elevation changes
+- Multi-story structures
+- Realistic mountain ranges
 
-### ИИ-генерация карт
+### AI Map Generation
 
-Интеграция с **Google Gemini API** и поддержка локальных LLM серверов:
-- Автоматическая генерация карт по описанию
-- Умное размещение рек и дорог с правильными соединениями
-- Автоматическая коррекция поворотов тайлов
-- Настраиваемые системные промпты
-
----
-
-## 📝 Лицензия
-
-Этот проект является приватным и не предназначен для публичного использования.
+Integration with **Google Gemini API** and support for local LLM servers:
+- Automatic map generation from description
+- Smart placement of rivers and roads with proper connections
+- Automatic tile rotation correction
+- Customizable system prompts
 
 ---
 
-## 🤝 Вклад в проект
+## 📝 License
 
-Проект находится в активной разработке. Если вы хотите внести вклад:
+MIT License
 
-1. Создайте issue с описанием проблемы или предложения
-2. Форкните репозиторий
-3. Создайте ветку для ваших изменений
-4. Внесите изменения и убедитесь, что код проходит линтинг
-5. Создайте Pull Request
+Copyright (c) 2025 Ravva
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ---
 
-## 📞 Контакты
+## 🤝 Contributing
 
-Если у вас есть вопросы или предложения, создайте issue в репозитории.
+The project is under active development. If you want to contribute:
+
+1. Create an issue describing the problem or suggestion
+2. Fork the repository
+3. Create a branch for your changes
+4. Make changes and ensure code passes linting
+5. Create a Pull Request
+
+---
+
+## 📞 Contact
+
+If you have questions or suggestions, create an issue in the repository.
 
 ---
 
 <div align="center">
 
-**Создано с ❤️ для разработки гексагональных карт**
+**Made with ❤️ for hexagonal map development**
 
 </div>
-
