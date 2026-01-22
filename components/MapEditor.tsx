@@ -495,15 +495,55 @@ export default function MapEditor() {
   useEffect(() => {
     const fetchAssets = async () => {
       try {
-        // Use static import for better compatibility
-        console.log('Raw tile registry import:', tileRegistry)
+        // Try multiple approaches to load tile registry
+        let tiles: any[] = []
 
-        // Handle different import formats
-        const tiles = tileRegistry?.tiles || tileRegistry || []
-        console.log('Loaded tile registry:', tiles.length, 'tiles')
+        // Approach 1: Try static import
+        try {
+          console.log('Trying static import...')
+          const staticRegistry = tileRegistry
+          console.log('Static import result:', staticRegistry)
+          tiles = staticRegistry?.tiles || staticRegistry || []
+          console.log('Static import tiles:', tiles.length)
+        } catch (error) {
+          console.error('Static import failed:', error)
+        }
+
+        // Approach 2: If static import failed, try fetch
+        if (tiles.length === 0) {
+          try {
+            console.log('Trying fetch approach...')
+            const response = await fetch('/Medieval-Hexagon-Map-Editor/lib/llm/tile-registry.json')
+            if (response.ok) {
+              const fetchedRegistry = await response.json()
+              console.log('Fetch result:', fetchedRegistry)
+              tiles = fetchedRegistry?.tiles || fetchedRegistry || []
+              console.log('Fetch tiles:', tiles.length)
+            } else {
+              console.error('Fetch failed with status:', response.status)
+            }
+          } catch (error) {
+            console.error('Fetch approach failed:', error)
+          }
+        }
+
+        // Approach 3: If both failed, try dynamic import
+        if (tiles.length === 0) {
+          try {
+            console.log('Trying dynamic import...')
+            const dynamicRegistry = await import('@/lib/llm/tile-registry.json')
+            console.log('Dynamic import result:', dynamicRegistry)
+            tiles = dynamicRegistry?.tiles || dynamicRegistry?.default?.tiles || dynamicRegistry?.default || []
+            console.log('Dynamic import tiles:', tiles.length)
+          } catch (error) {
+            console.error('Dynamic import failed:', error)
+          }
+        }
+
+        console.log('Final loaded tile registry:', tiles.length, 'tiles')
 
         if (tiles.length === 0) {
-          console.error('Tile registry is empty! Check the JSON file structure.')
+          console.error('All approaches failed! Tile registry is empty!')
           return
         }
 
