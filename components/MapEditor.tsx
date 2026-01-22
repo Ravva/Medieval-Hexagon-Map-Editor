@@ -47,6 +47,7 @@ import { MapSerializer, type BuildingData } from '@/lib/game/MapSerializer'
 import { axialToWorld, worldToAxial, offsetToAxial } from '@/lib/game/HexCoordinateConverter'
 import { modelLoader } from '@/lib/three/ModelLoader'
 import { tileRegistry } from '@/lib/llm/tile-registry'
+import { cn } from '@/lib/utils'
 
 type EditMode = 'terrain' | 'building'
 
