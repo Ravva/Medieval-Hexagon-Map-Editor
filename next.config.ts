@@ -7,14 +7,14 @@ const nextConfig: NextConfig = {
 
   // GitHub Pages configuration
   output: 'export',
-  trailingSlash: false, // Changed to false for GitHub Pages
+  trailingSlash: false,
   images: {
     unoptimized: true,
   },
 
-  // Temporarily disable basePath to test GitHub Pages deployment
-  // basePath: process.env.NODE_ENV === 'production' ? '/Medieval-Hexagon-Map-Editor' : '',
-  // assetPrefix: process.env.NODE_ENV === 'production' ? '/Medieval-Hexagon-Map-Editor/' : '',
+  // Enable basePath for GitHub Pages (repository deployment)
+  basePath: '/Medieval-Hexagon-Map-Editor',
+  assetPrefix: '/Medieval-Hexagon-Map-Editor/',
 
   // Turbopack настройки (используется с --turbo флагом)
   // Turbopack быстрее webpack в 10-700 раз для dev сборки

@@ -4,11 +4,10 @@
 
 /**
  * Get the base path for the application
- * Temporarily disabled for GitHub Pages testing
+ * For GitHub Pages repository deployment
  */
 export function getBasePath(): string {
-  // Temporarily return empty string to test GitHub Pages
-  return ''
+  return '/Medieval-Hexagon-Map-Editor'
 }
 
 /**
