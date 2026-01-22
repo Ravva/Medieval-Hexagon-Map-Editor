@@ -12,8 +12,8 @@ export function getBasePath(): string {
 
 /**
  * Convert asset path to work with GitHub Pages
- * In development: /assets/... -> /api/assets/...
  * In production: /assets/... -> /Medieval-Hexagon-Map-Editor/assets/...
+ * In development: /assets/... -> /api/assets/... (API route)
  */
 export function getAssetPath(path: string): string {
   if (!path.startsWith('/assets/')) {
@@ -22,8 +22,8 @@ export function getAssetPath(path: string): string {
 
   const basePath = getBasePath()
 
-  if (process.env.NODE_ENV === 'production') {
-    // In production, assets are served statically
+  if (process.env.NODE_ENV === 'production' || basePath) {
+    // In production, assets are served statically from public/assets
     return `${basePath}${path}`
   } else {
     // In development, assets are served through API route
@@ -35,8 +35,15 @@ export function getAssetPath(path: string): string {
  * Get the full URL for an asset
  */
 export function getAssetUrl(path: string): string {
-  if (typeof window !== 'undefined') {
-    return new URL(getAssetPath(path), window.location.origin).href
+  const assetPath = getAssetPath(path)
+
+  // Debug logging in development
+  if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+    console.log('Asset path conversion:', { original: path, converted: assetPath })
   }
-  return getAssetPath(path)
+
+  if (typeof window !== 'undefined') {
+    return new URL(assetPath, window.location.origin).href
+  }
+  return assetPath
 }
