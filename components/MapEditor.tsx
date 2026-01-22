@@ -495,17 +495,51 @@ export default function MapEditor() {
   useEffect(() => {
     const fetchAssets = async () => {
       try {
-        const response = await fetch('/api/assets')
-        const data = await response.json()
-        setAssetCategories(data.categories)
-        if (data.categories.length > 0) {
-          const tiles = data.categories.find((c: any) => c.name === 'tiles')
+        // In production, use tile registry instead of API
+        const tileRegistry = await import('@/lib/llm/tile-registry.json')
+
+        // Group tiles by category and subcategory
+        const categories: any = {}
+
+        tileRegistry.tiles.forEach((tile: any) => {
+          if (!categories[tile.category]) {
+            categories[tile.category] = {
+              name: tile.category,
+              folders: {}
+            }
+          }
+
+          const subcategory = tile.subcategory || 'default'
+          if (!categories[tile.category].folders[subcategory]) {
+            categories[tile.category].folders[subcategory] = {
+              name: subcategory,
+              models: []
+            }
+          }
+
+          categories[tile.category].folders[subcategory].models.push({
+            name: tile.name,
+            obj: tile.obj_path,
+            mtl: tile.mtl_path,
+            texture: tile.texture_path
+          })
+        })
+
+        // Convert to array format
+        const categoryArray = Object.values(categories).map((cat: any) => ({
+          ...cat,
+          folders: Object.values(cat.folders)
+        }))
+
+        setAssetCategories(categoryArray)
+        if (categoryArray.length > 0) {
+          const tiles = categoryArray.find((c: any) => c.name === 'tiles')
           if (tiles) {
             setSelectedCategory('tiles')
             if (tiles.folders.length > 0) setSelectedFolder(tiles.folders[0].name)
           } else {
-            setSelectedCategory(data.categories[0].name)
-            setSelectedFolder(data.categories[0].folders[0].name)
+            setSelectedCategory(categoryArray[0].name)
+            setSelectedFolder(categoryArray[0].folders[0].name)
           }
         }
       } catch (error) {
