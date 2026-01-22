@@ -22,13 +22,26 @@ export function getAssetPath(path: string): string {
 
   const basePath = getBasePath()
 
+  let result: string
   if (process.env.NODE_ENV === 'production' || basePath) {
     // In production, assets are served statically from public/assets
-    return `${basePath}${path}`
+    result = `${basePath}${path}`
   } else {
     // In development, assets are served through API route
-    return path.replace('/assets/', '/api/assets/')
+    result = path.replace('/assets/', '/api/assets/')
   }
+
+  // Debug logging
+  if (typeof window !== 'undefined') {
+    console.log('Asset path conversion:', {
+      original: path,
+      basePath,
+      nodeEnv: process.env.NODE_ENV,
+      result
+    })
+  }
+
+  return result
 }
 
 /**

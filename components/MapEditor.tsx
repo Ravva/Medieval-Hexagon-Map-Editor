@@ -498,6 +498,8 @@ export default function MapEditor() {
         // In production, use tile registry instead of API
         const tileRegistry = await import('@/lib/llm/tile-registry.json')
 
+        console.log('Loaded tile registry:', tileRegistry.tiles.length, 'tiles')
+
         // Group tiles by category and subcategory
         const categories: any = {}
 
@@ -531,15 +533,28 @@ export default function MapEditor() {
           folders: Object.values(cat.folders)
         }))
 
+        console.log('Processed categories:', categoryArray.length, categoryArray.map(c => c.name))
+        console.log('Categories structure:', categoryArray.map(c => ({
+          name: c.name,
+          folders: c.folders.map((f: any) => ({ name: f.name, modelCount: f.models.length }))
+        })))
+
         setAssetCategories(categoryArray)
         if (categoryArray.length > 0) {
           const tiles = categoryArray.find((c: any) => c.name === 'tiles')
           if (tiles) {
+            console.log('Setting tiles category, folders:', tiles.folders.map((f: any) => f.name))
             setSelectedCategory('tiles')
-            if (tiles.folders.length > 0) setSelectedFolder(tiles.folders[0].name)
+            if (tiles.folders.length > 0) {
+              setSelectedFolder(tiles.folders[0].name)
+              console.log('Selected folder:', tiles.folders[0].name, 'with', tiles.folders[0].models.length, 'models')
+            }
           } else {
+            console.log('No tiles category found, using first category:', categoryArray[0].name)
             setSelectedCategory(categoryArray[0].name)
-            setSelectedFolder(categoryArray[0].folders[0].name)
+            if (categoryArray[0].folders.length > 0) {
+              setSelectedFolder(categoryArray[0].folders[0].name)
+            }
           }
         }
       } catch (error) {
