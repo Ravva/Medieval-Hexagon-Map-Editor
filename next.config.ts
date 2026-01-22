@@ -12,9 +12,9 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
 
-  // Base path for GitHub Pages (repository name)
-  basePath: process.env.NODE_ENV === 'production' ? '/Medieval-Hexagon-Map-Editor' : '',
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/Medieval-Hexagon-Map-Editor/' : '',
+  // Temporarily disable basePath to test GitHub Pages deployment
+  // basePath: process.env.NODE_ENV === 'production' ? '/Medieval-Hexagon-Map-Editor' : '',
+  // assetPrefix: process.env.NODE_ENV === 'production' ? '/Medieval-Hexagon-Map-Editor/' : '',
 
   // Turbopack настройки (используется с --turbo флагом)
   // Turbopack быстрее webpack в 10-700 раз для dev сборки

@@ -4,20 +4,11 @@
 
 /**
  * Get the base path for the application
- * In development: empty string
- * In production (GitHub Pages): repository name
+ * Temporarily disabled for GitHub Pages testing
  */
 export function getBasePath(): string {
-  if (typeof window !== 'undefined') {
-    // Client-side: use the actual base path from the URL
-    const pathSegments = window.location.pathname.split('/').filter(Boolean)
-    return pathSegments.length > 0 && pathSegments[0] === 'Medieval-Hexagon-Map-Editor'
-      ? '/Medieval-Hexagon-Map-Editor'
-      : ''
-  }
-
-  // Server-side: use environment variable
-  return process.env.NODE_ENV === 'production' ? '/Medieval-Hexagon-Map-Editor' : ''
+  // Temporarily return empty string to test GitHub Pages
+  return ''
 }
 
 /**
