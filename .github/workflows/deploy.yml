@@ -40,6 +40,13 @@ jobs:
     - name: Add .nojekyll file
       run: touch out/.nojekyll
 
+    - name: Debug - List output files
+      run: |
+        echo "Contents of out directory:"
+        ls -la out/
+        echo "Checking for index.html:"
+        ls -la out/index.html || echo "index.html not found"
+
     - name: Setup Pages
       uses: actions/configure-pages@v4
 

@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
 
   // GitHub Pages configuration
   output: 'export',
-  trailingSlash: true,
+  trailingSlash: false, // Changed to false for GitHub Pages
   images: {
     unoptimized: true,
   },
