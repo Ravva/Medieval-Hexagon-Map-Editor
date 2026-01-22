@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
+import { getAssetPath } from '@/lib/utils/paths'
 import {
   MapTrifold,
   FloppyDisk,
@@ -283,7 +284,7 @@ function ModelPreview({ obj, mtl }: { obj: string; mtl: string }) {
     const previewId = previewIdRef.current
     let tempGroup: THREE.Group | null = null
 
-    modelLoader.loadModel(`${obj}_preview`, obj, mtl).then(model => {
+    modelLoader.loadModel(`${obj}_preview`, getAssetPath(obj), getAssetPath(mtl)).then(model => {
       if (!isMounted) return
 
       const modelInstance = model.clone()
@@ -618,7 +619,7 @@ export default function MapEditor() {
 
         // If not in cache, wait for it
         if (!loadedModel) {
-          loadedModel = await modelLoader.loadModel(key, model.obj, model.mtl)
+          loadedModel = await modelLoader.loadModel(key, getAssetPath(model.obj), getAssetPath(model.mtl))
         }
 
         if (loadedModel) {
@@ -923,8 +924,8 @@ export default function MapEditor() {
       if (selectedTile) {
         // Используем тайл из диалога
         const model = {
-          obj: selectedTile.obj_path,
-          mtl: selectedTile.mtl_path,
+          obj: getAssetPath(selectedTile.obj_path),
+          mtl: getAssetPath(selectedTile.mtl_path),
           name: selectedTile.name
         }
         handleInitializeMapWithModel(newMapSize, model)
@@ -1883,7 +1884,7 @@ export default function MapEditor() {
     if (oldBuilding) sceneRef.current.remove(oldBuilding)
     try {
       const key = `building_${building.name}_${q}_${r}`
-      const loadedModel = await modelLoader.loadModel(key, building.obj, building.mtl)
+      const loadedModel = await modelLoader.loadModel(key, getAssetPath(building.obj), getAssetPath(building.mtl))
       loadedModel.position.set(worldX, 0, worldZ)
       loadedModel.rotation.y = Math.PI / 2
       loadedModel.scale.set(3.5, 3.5, 3.5)
@@ -1891,8 +1892,8 @@ export default function MapEditor() {
       // Store model metadata for serialization
       ;(loadedModel as any).userData = {
         modelData: {
-          obj: building.obj,
-          mtl: building.mtl,
+          obj: getAssetPath(building.obj),
+          mtl: getAssetPath(building.mtl),
           name: building.name,
         },
       }
@@ -2554,7 +2555,7 @@ export default function MapEditor() {
             <div className="flex items-center justify-center gap-3">
               <div className="w-6 h-6 overflow-visible flex items-center justify-center">
                 <div style={{ transform: 'scale(4)' }}>
-                  <ModelPreview obj="/assets/terrain/buildings/blue/building_home_B_blue.obj" mtl="/assets/terrain/buildings/blue/building_home_B_blue.mtl" />
+                  <ModelPreview obj={getAssetPath("/assets/terrain/buildings/blue/building_home_B_blue.obj")} mtl={getAssetPath("/assets/terrain/buildings/blue/building_home_B_blue.mtl")} />
                 </div>
               </div>
               <div className="flex flex-col items-start ml-[20px]">
@@ -2593,7 +2594,7 @@ export default function MapEditor() {
                     className={cn("p-1 rounded-xl border-2 transition-all cursor-pointer group hover:bg-muted/30", selectedModel?.name === m.name ? "border-primary bg-primary/5" : "border-transparent bg-muted/10")}
                   >
                     <div className="aspect-square w-full">
-                      <ModelPreview obj={m.obj} mtl={m.mtl} />
+                      <ModelPreview obj={getAssetPath(m.obj)} mtl={getAssetPath(m.mtl)} />
                     </div>
                     <p className="text-[11px] font-bold text-center mt-1 truncate px-1 py-1 uppercase tracking-tight">{m.name}</p>
                   </div>
@@ -2603,14 +2604,17 @@ export default function MapEditor() {
           </div>
         </ScrollArea>
         <div className="p-4 border-t border-border flex flex-col gap-2">
-          <Button
-            className="w-full font-bold shadow-lg shadow-primary/20 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600"
-            onClick={handleGenerateMap}
-            disabled={isGenerating}
-          >
-            <Sparkle size={16} className="mr-2" />
-            {isGenerating ? 'Generating...' : 'Generate Map (AI)'}
-          </Button>
+          {/* AI Generation temporarily disabled for GitHub Pages deployment */}
+          {false && (
+            <Button
+              className="w-full font-bold shadow-lg shadow-primary/20 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600"
+              onClick={handleGenerateMap}
+              disabled={isGenerating}
+            >
+              <Sparkle size={16} className="mr-2" />
+              {isGenerating ? 'Generating...' : 'Generate Map (AI)'}
+            </Button>
+          )}
         </div>
 
         {/* Save Map Dialog */}
@@ -2863,7 +2867,7 @@ export default function MapEditor() {
             </div>
             <div className="w-8 h-8 overflow-visible ml-1 flex items-center justify-center">
               <div style={{ transform: 'scale(2.5)' }}>
-                <ModelPreview obj={selectedModel.obj} mtl={selectedModel.mtl} />
+                <ModelPreview obj={getAssetPath(selectedModel.obj)} mtl={getAssetPath(selectedModel.mtl)} />
               </div>
             </div>
           </div>
@@ -2936,7 +2940,7 @@ export default function MapEditor() {
                     return (
                       <div className="w-8 h-8 overflow-visible ml-1 flex items-center justify-center">
                         <div style={{ transform: 'scale(2.5)' }}>
-                          <ModelPreview obj={selectedHex.modelData.obj} mtl={selectedHex.modelData.mtl} />
+                          <ModelPreview obj={getAssetPath(selectedHex.modelData.obj)} mtl={getAssetPath(selectedHex.modelData.mtl)} />
                         </div>
                       </div>
                     )

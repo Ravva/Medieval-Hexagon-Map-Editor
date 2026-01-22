@@ -3,6 +3,7 @@
 import type React from 'react'
 import { useState, useMemo, useEffect } from 'react'
 import { FileX } from 'lucide-react'
+import { getAssetPath } from '@/lib/utils/paths'
 import {
   Dialog,
   DialogContent,
@@ -153,7 +154,7 @@ export function NewMapDialog({
                     )}
                   >
                     <div className="w-20 h-20">
-                      <TilePreview obj={tile.obj_path} mtl={tile.mtl_path} />
+                      <TilePreview obj={getAssetPath(tile.obj_path)} mtl={getAssetPath(tile.mtl_path)} />
                     </div>
                     <div className="text-xs text-muted-foreground text-center line-clamp-2 px-1">
                       {tile.name}

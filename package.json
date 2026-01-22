@@ -5,9 +5,11 @@
   "scripts": {
     "dev": "next dev --turbo",
     "dev:webpack": "next dev --webpack",
-    "build": "next build --webpack",
-    "build:turbo": "next build --turbo",
+    "build": "next build --turbo",
+    "build:webpack": "next build --webpack",
     "start": "next start",
+    "export": "next build && next export",
+    "deploy": "bun run build && touch out/.nojekyll",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
     "format": "biome format --write .",

@@ -5,6 +5,17 @@ const nextConfig: NextConfig = {
   /* config options here */
   reactStrictMode: true,
 
+  // GitHub Pages configuration
+  output: 'export',
+  trailingSlash: true,
+  images: {
+    unoptimized: true,
+  },
+
+  // Base path for GitHub Pages (repository name)
+  basePath: process.env.NODE_ENV === 'production' ? '/Medieval-Hexagon-Map-Editor' : '',
+  assetPrefix: process.env.NODE_ENV === 'production' ? '/Medieval-Hexagon-Map-Editor/' : '',
+
   // Turbopack настройки (используется с --turbo флагом)
   // Turbopack быстрее webpack в 10-700 раз для dev сборки
   // Для production сборки используем webpack (стабильнее)
@@ -31,15 +42,9 @@ const nextConfig: NextConfig = {
     return config
   },
 
-  // Assets доступны через /assets/* (rewrite на /api/assets/*)
-  async rewrites() {
-    return [
-      {
-        source: '/assets/:path*',
-        destination: '/api/assets/:path*',
-      },
-    ]
-  },
+  // Assets доступны через /assets/* (только для dev режима)
+  // В production режиме API routes не работают со статическим экспортом
+  // Убираем rewrites для статического экспорта
 }
 
 export default nextConfig

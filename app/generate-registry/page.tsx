@@ -610,7 +610,7 @@ export default function GenerateRegistryPage() {
                         ] as const
                       ).map((direction) => {
                         const connectionType = selectedTile.connections?.[direction] || 'none'
-                        const display = getConnectionDisplay(connectionType)
+                        const display = getConnectionDisplay(typeof connectionType === 'string' ? connectionType : 'none')
                         return (
                           <div key={direction} className="flex items-center gap-2 text-sm">
                             <span className="uppercase text-xs font-mono w-8">
@@ -653,7 +653,7 @@ export default function GenerateRegistryPage() {
                         ] as const
                       ).map((direction) => {
                         const connectionType = editedConnections?.[direction] || 'none'
-                        const display = getConnectionDisplay(connectionType)
+                        const display = getConnectionDisplay(typeof connectionType === 'string' ? connectionType : 'none')
                         return (
                           <div key={direction} className="flex items-center gap-2 text-sm">
                             <span className="uppercase text-xs font-mono w-8">
