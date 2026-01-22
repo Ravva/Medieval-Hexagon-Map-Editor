@@ -576,6 +576,18 @@ export default function MapEditor() {
   const currentFolder = currentCategory?.folders.find(f => f.name === selectedFolder)
   const availableModels = currentFolder?.models || []
 
+  // Debug logging for asset state
+  useEffect(() => {
+    console.log('Asset state debug:', {
+      assetCategoriesLength: assetCategories.length,
+      selectedCategory,
+      selectedFolder,
+      currentCategory: currentCategory ? { name: currentCategory.name, foldersCount: currentCategory.folders.length } : null,
+      currentFolder: currentFolder ? { name: currentFolder.name, modelsCount: currentFolder.models.length } : null,
+      availableModelsLength: availableModels.length
+    })
+  }, [assetCategories, selectedCategory, selectedFolder, currentCategory, currentFolder, availableModels])
+
   // Convert axial coordinates (q, r) to world coordinates for Three.js
   const hexToWorld = (q: number, r: number, mWidth?: number, mHeight?: number): [number, number] => {
     const width = mWidth ?? mapRef.current?.width ?? 10
