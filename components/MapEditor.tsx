@@ -46,7 +46,7 @@ import { Map as GameMap } from '@/lib/game/Map'
 import { MapSerializer, type BuildingData } from '@/lib/game/MapSerializer'
 import { axialToWorld, worldToAxial, offsetToAxial } from '@/lib/game/HexCoordinateConverter'
 import { modelLoader } from '@/lib/three/ModelLoader'
-import { cn } from '@/lib/utils'
+import { tileRegistry } from '@/lib/llm/tile-registry'
 
 type EditMode = 'terrain' | 'building'
 
@@ -495,15 +495,22 @@ export default function MapEditor() {
   useEffect(() => {
     const fetchAssets = async () => {
       try {
-        // In production, use tile registry instead of API
-        const tileRegistry = await import('@/lib/llm/tile-registry.json')
+        // Use static import for better compatibility
+        console.log('Raw tile registry import:', tileRegistry)
 
-        console.log('Loaded tile registry:', tileRegistry.tiles.length, 'tiles')
+        // Handle different import formats
+        const tiles = tileRegistry?.tiles || tileRegistry || []
+        console.log('Loaded tile registry:', tiles.length, 'tiles')
+
+        if (tiles.length === 0) {
+          console.error('Tile registry is empty! Check the JSON file structure.')
+          return
+        }
 
         // Group tiles by category and subcategory
         const categories: any = {}
 
-        tileRegistry.tiles.forEach((tile: any) => {
+        tiles.forEach((tile: any) => {
           if (!categories[tile.category]) {
             categories[tile.category] = {
               name: tile.category,

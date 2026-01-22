@@ -24,7 +24,7 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { TilePreview } from '@/components/TilePreview'
 import { cn } from '@/lib/utils'
-import tileRegistry from '@/lib/llm/tile-registry.json'
+import { tileRegistry } from '@/lib/llm/tile-registry'
 
 type MapSize = 'tiny' | 'small' | 'medium' | 'large' | 'very-large'
 
@@ -59,7 +59,12 @@ export function NewMapDialog({
   const [selectedTile, setSelectedTile] = useState<BaseTile | null>(null)
 
   const baseTiles = useMemo(() => {
-    const tiles = (tileRegistry as any).tiles || []
+    // Handle different import formats for tile registry
+    const tiles = tileRegistry?.tiles || tileRegistry || []
+
+    console.log('NewMapDialog: Raw registry data:', tileRegistry)
+    console.log('NewMapDialog: Extracted tiles:', tiles.length)
+
     return tiles.filter(
       (tile: any) => tile.category === 'tiles' && tile.subcategory === 'base'
     ) as BaseTile[]
