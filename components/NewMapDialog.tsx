@@ -58,16 +58,56 @@ export function NewMapDialog({
   const [fillMap, setFillMap] = useState(false)
   const [selectedTile, setSelectedTile] = useState<BaseTile | null>(null)
 
-  const baseTiles = useMemo(() => {
-    // Handle different import formats for tile registry
-    const tiles = tileRegistry?.tiles || tileRegistry || []
+  const [baseTiles, setBaseTiles] = useState<BaseTile[]>([])
 
-    console.log('NewMapDialog: Raw registry data:', tileRegistry)
-    console.log('NewMapDialog: Extracted tiles:', tiles.length)
+  // Load base tiles asynchronously like in MapEditor
+  useEffect(() => {
+    const loadBaseTiles = async () => {
+      try {
+        // Try multiple approaches to load tile registry (same as MapEditor)
+        let tiles: any[] = []
 
-    return tiles.filter(
-      (tile: any) => tile.category === 'tiles' && tile.subcategory === 'base'
-    ) as BaseTile[]
+        // Approach 1: Try static import
+        try {
+          console.log('NewMapDialog: Trying static import...')
+          const staticRegistry = tileRegistry
+          tiles = staticRegistry?.tiles || staticRegistry || []
+          console.log('NewMapDialog: Static import tiles:', tiles.length)
+        } catch (error) {
+          console.error('NewMapDialog: Static import failed:', error)
+        }
+
+        // Approach 2: If static import failed, try fetch
+        if (tiles.length === 0) {
+          try {
+            console.log('NewMapDialog: Trying fetch approach...')
+            const response = await fetch('/Medieval-Hexagon-Map-Editor/lib/llm/tile-registry.json')
+            if (response.ok) {
+              const fetchedRegistry = await response.json()
+              tiles = fetchedRegistry?.tiles || fetchedRegistry || []
+              console.log('NewMapDialog: Fetch tiles:', tiles.length)
+            } else {
+              console.error('NewMapDialog: Fetch failed with status:', response.status)
+            }
+          } catch (error) {
+            console.error('NewMapDialog: Fetch approach failed:', error)
+          }
+        }
+
+        console.log('NewMapDialog: Final loaded tiles:', tiles.length)
+
+        const filteredTiles = tiles.filter(
+          (tile: any) => tile.category === 'tiles' && tile.subcategory === 'base'
+        ) as BaseTile[]
+
+        console.log('NewMapDialog: Base tiles found:', filteredTiles.length)
+        setBaseTiles(filteredTiles)
+      } catch (error) {
+        console.error('NewMapDialog: Failed to load base tiles:', error)
+      }
+    }
+
+    loadBaseTiles()
   }, [])
 
   // Автоматически выбираем первый тайл при включении fillMap

@@ -1473,6 +1473,20 @@ export default function MapEditor() {
 
     await Promise.all(promises)
     console.log('buildMap completed - hexes created:', hexCount, 'meshes in ref:', hexMeshesRef.current.size)
+
+    // Ensure grid is visible for empty maps
+    if (hexCount === 0) {
+      console.log('Empty map detected, ensuring grid visibility')
+      sceneRef.current.children.forEach(child => {
+        if (child.name.startsWith('__hexGrid_level_')) {
+          const level = parseInt(child.name.split('_')[3])
+          child.visible = (level === currentHeightLevel)
+          if (level === currentHeightLevel) {
+            console.log('Made grid visible for level:', level)
+          }
+        }
+      })
+    }
   }
 
   const updateHexMesh = async (q: number, r: number, height?: number) => {
